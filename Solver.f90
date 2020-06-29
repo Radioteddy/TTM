@@ -235,7 +235,6 @@ Module Solver
         dd = ddd
         
         dz = TTM_parameters%X(2)-TTM_parameters%X(1)    ! space step
-        print*, dz
         
         ! allocation of all intermediate arrays
         allocate(Tel_temp(2, size(TTM_parameters%Tel)))
