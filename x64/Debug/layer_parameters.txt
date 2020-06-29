@@ -1,0 +1,14 @@
+! Material specifications
+4	! Number of layers for calculation. 
+Air	1	1.d37	! refractive index and width of layer (in nm). For ambient and last layer width should be infinite, use 1.d37
+Pt	(1.7176, 2.844)		100
+Si	(5.5674, 0.38612)	5000
+Air	1	1.d37
+100000	!Number of points for calculation. Must be greather than total thikness of multilayer structure
+
+! Laser specifications
+400		! laser wavelength (in nm)
+45		! incinent angle (deg)
+p		! polarization, must be s or p
+60		! incident fluence (in J/m^2)
+0.1d-12	! pulse duration (in s)

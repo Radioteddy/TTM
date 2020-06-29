@@ -1,0 +1,10 @@
+Pt	!	material name
+300	!	initial electron temperature (K)
+35.24d-3	! electron heat capacity (J/m^3 K)
+72	! electron thermal conductivity
+300 ! initial lattice temperature (K)
+132.38 ! lattice heat capacity (J/m^3 K)
+2.5d17 ! electron-phonon coupling (W/m^3 K)
+160	! number of space cells
+1.d-17	! timestep [s]
+5.d-12	! end of calculation time [s]
