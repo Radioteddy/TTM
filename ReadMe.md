@@ -1,5 +1,6 @@
-                         # TTM code overview
+# TTM code overview
 
+---
 
 This project contains a set of modules for 2T equations solving, 
 accounting transfer-matrix absorption profile  
