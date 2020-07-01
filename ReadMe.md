@@ -23,6 +23,11 @@ accounting transfer-matrix absorption profile
     This file contains initial parameters of electron and lattice subsystems.
     Now is FOR ONE LAYER!
     See details in file
+    
+
+### laser_parameters.txt
+    This file contains laser specifications.
+    See details in file
 
 ---
 
