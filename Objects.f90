@@ -31,6 +31,7 @@ module Objects
         real(8) in_angle ! angle of incidence [deg]
         real(8) lambda   ! wavelength of laser [nm]
         real(8) tpulse	 ! pulse duration [s]
+        real(8) tpeak    ! center of peak time [s]
         real(8) Fluence	 ! incident fluence [J/m^2]
     end type Source
     
@@ -45,6 +46,7 @@ module Objects
         real(8) Clat    ! lattice heat capacity [J/m^3 K]
         real(8) G       ! electron-phonon coupling [W/m^3 K]
         real(8) dt      ! timestep [s]
+        real(8) tsave   ! time to save data [s]
         real(8) tend    ! end of calculation time [s]
         real(8), dimension(:), allocatable :: res_time      ! timegrid [s]
         real(8), dimension(:,:), allocatable :: res_Tel     ! final electron temperature (res_time,X)
@@ -54,6 +56,10 @@ module Objects
         real(8), dimension(:), allocatable :: res_Elat      ! lattice energy density (res_time)
         real(8), dimension(:), allocatable :: res_dE        ! energy deviation in percents (res_time)
         character(20) mat    ! name of material
+        integer flag    ! flag of space part of source. 1 is Beer-Lambert law, 2 is Transfer-Matrix method
+        real(8) dlayer  ! thickness of layer [m]. Used only in the case of BL law
+        real(8) l_bal   ! ballistic range [m]. Otpional, used in the case of BL law
+        complex(8) n   ! complex refractive index of layer. Used only in the case of BL law
     end type TTM
     
 end module Objects

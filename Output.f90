@@ -52,7 +52,7 @@ module Output
     open(unit=FN, file=trim(adjustl(Filename2)))
     write(FN, '(a,a,a)', advance='no') '# multilayer: ', trim(adjustl(InTarget%syscompound)), ' ('
     do i = 1, size(InTarget%layer)
-        write(FN, '(a,e8.3)', advance='no') '_', InTarget%layer(i)
+        write(FN, '(a,e11.3)', advance='no') '_', InTarget%layer(i)
     enddo
     write(FN, '(a,f5.2,a)') '); theta_0 = ', Laser%in_angle, ' (deg)'
         
@@ -169,24 +169,24 @@ module Output
         type(Multilayer), intent(inout) :: InTarget !   object with parameters of the system
         type(TTM), intent(inout) :: parameters      ! object with TTM parameters
         ! deallocate multilayer parameters
-        deallocate(InTarget%nlayer)
-        deallocate(InTarget%layer)
-        deallocate(InTarget%theta)
-        deallocate(InTarget%phase)
-        deallocate(InTarget%ref)
-        deallocate(InTarget%trans)
-        deallocate(InTarget%Mlayer)
-        deallocate(InTarget%M) 
-        deallocate(InTarget%fb)
-        deallocate(InTarget%Absorp)
-        deallocate(InTarget%spacegrid)
+        if (allocated(InTarget%nlayer)) deallocate(InTarget%nlayer)
+        if (allocated(InTarget%layer)) deallocate(InTarget%layer)
+        if (allocated(InTarget%theta)) deallocate(InTarget%theta)
+        if (allocated(InTarget%phase)) deallocate(InTarget%phase)
+        if (allocated(InTarget%ref)) deallocate(InTarget%ref)
+        if (allocated(InTarget%trans)) deallocate(InTarget%trans)
+        if (allocated(InTarget%Mlayer)) deallocate(InTarget%Mlayer)
+        if (allocated(InTarget%M)) deallocate(InTarget%M) 
+        if (allocated(InTarget%fb)) deallocate(InTarget%fb)
+        if (allocated(InTarget%Absorp)) deallocate(InTarget%Absorp)
+        if (allocated(InTarget%spacegrid)) deallocate(InTarget%spacegrid)
         ! deallocate 2T model parameters
-        deallocate(parameters%X)
-        deallocate(parameters%Tel)
-        deallocate(parameters%Tlat)
-        deallocate(parameters%res_time)
-        deallocate(parameters%res_Tel)
-        deallocate(parameters%res_Tlat)
+        if (allocated(parameters%X)) deallocate(parameters%X)
+        if (allocated(parameters%Tel)) deallocate(parameters%Tel)
+        if (allocated(parameters%Tlat)) deallocate(parameters%Tlat)
+        if (allocated(parameters%res_time)) deallocate(parameters%res_time)
+        if (allocated(parameters%res_Tel)) deallocate(parameters%res_Tel)
+        if (allocated(parameters%res_Tlat)) deallocate(parameters%res_Tlat)
         
     end subroutine Deallocate_all
     

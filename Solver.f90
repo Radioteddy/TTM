@@ -16,13 +16,37 @@ Module Solver
         real(8) t            ! current timestep [s]
         type(Source), intent(in) :: Laser   ! object with parameters of laser
         real(8) T_Source                    ! fucntion itself
-        real(8) sigma, tpos                 ! width of gaussian and center of peak    
+        real(8) sigma, tpos                 ! width of gaussian     
         
         sigma  = 4.d0*log(2.0d0) / Laser%tpulse**2
-        tpos   = 3.d0*Laser%tpulse
-        T_Source = sqrt(sigma/g_pi) * Laser%Fluence * exp(-sigma*(t-tpos)**2.d0)
+        T_Source = sqrt(sigma/g_pi) * Laser%Fluence * exp(-sigma*(t-Laser%tpeak)**2.d0)
     end function T_Source
     
+    subroutine Beer_Lambert(laser, parameters, space_source)
+    ! space part of source according Beer-Lambert law
+    type(Source), intent(in) :: laser   ! object with parameters of laser
+    type(TTM), intent(in) :: parameters ! object with TTM parameters
+    real(8), dimension(:), intent(out) :: space_source    ! space part of source [1/m]
+    real(8) delta, R, T
+    complex(8) rr, tt, theta_t, theta_i, n_i
+    
+    theta_i = cmplx(laser%in_angle)   ! complex incident angle
+    n_i = (1.0d0, 0.0d0) ! complex index of refraction of vacuum ambient
+    call Fresnel(theta_i, n_i, parameters%n, laser, theta_t, rr, tt) ! calculate Fresnel equations
+    R = abs(rr)**2
+    !select case(laser%pol)
+    !    case('s')
+    !        T = abs(tt)**2 * real(parameters%n*cos(theta_t)) / real(n_i*cos(theta_i))
+    !    case('p')
+    !        T = abs(tt)**2 * real(parameters%n*cos(conjg(theta_t))) / real(n_i*cos(conjg(theta_i)))
+    !    case default 
+    !        T = abs(tt)**2 * real(parameters%n*cos(theta_t)) / real(n_i*cos(theta_i))
+    !    end select
+    delta = (laser%lambda * 1.d-9) / (4*g_pi*aimag(parameters%n)) + parameters%l_bal ! penetration depth
+    space_source(:) = (1.0d0 - R) * exp(-parameters%X(:)/delta) / (delta*(1 - exp(-parameters%dlayer/delta)))
+    return
+    end subroutine Beer_Lambert
+            
     subroutine Explicit_lattice(dt, dz, Tlat, Clat, klat, Tel, G)
     ! Explicit scheme for lattice temperature, initial predictions
     ! index 2 in arrays corresponds to the current and next timesteps
@@ -202,31 +226,38 @@ Module Solver
         
         real(8) Fabs, Elat, Eel, DeltaE, res ! variables for energy conservation checking
         real(8), dimension(:), allocatable :: Tint, Cint    ! temporary arrays of temperature and heat capacity
-        integer, parameter :: Nint = 50     ! number of integration steps in Simpson integration routine
+        integer, parameter :: Nint = 20     ! number of integration steps in Simpson integration routine
         
         ! prepare space part of source !
-        ind = findloc(intarget%materials, TTM_parameters%mat, dim=1)
-        width = 0.0d0
-        if (ind .gt. 3) then    
-            width = sum(intarget%layer(2:ind-1))    ! here and below we don't account ambient layer
-        else if (ind .gt. 2) then
-            width = intarget%layer(2)
-        end if
-        call calculate_absorption(laser, intarget)
         allocate(s_source(size(TTM_parameters%X)))
-        allocate(temp_space(size(intarget%spacegrid)))
-        temp_space(:) = (intarget%spacegrid(:) - width) * 1.d-9 ! convert from [nm] to [m]
-        do i = 1, size(TTM_parameters%X)
-            call find_in_1D_array(temp_space(:), TTM_parameters%X(i), j)
-            if (temp_space(j) .eq. TTM_parameters%X(i)) then
-                s_source(i) = intarget%absorp(j) * 1.d9 ! convert form [1/nm] to [1/m]
-            else
-                call interpolate(1, temp_space(j-1), temp_space(j), intarget%absorp(j-1), intarget%absorp(j), TTM_parameters%X(i), out_absorp)
-                s_source(i) = out_absorp * 1.d9 ! convert form [1/nm] to [1/m]
-            end if
-        end do
+        select case(TTM_parameters%flag)
+            case(1) ! Beer-Lambert law
+                call Beer_Lambert(laser, TTM_parameters, s_source)
+            case(2) ! Transfer-matrix algorithm
+                ind = findloc(intarget%materials, TTM_parameters%mat, dim=1)
+                width = 0.0d0
+                if (ind .gt. 3) then    
+                    width = sum(intarget%layer(2:ind-1))    ! here and below we don't account ambient layer
+                else if (ind .gt. 2) then
+                    width = intarget%layer(2)
+                end if
+                call calculate_absorption(laser, intarget)
+                allocate(temp_space(size(intarget%spacegrid)))
+                temp_space(:) = (intarget%spacegrid(:) - width) * 1.d-9 ! convert from [nm] to [m]
+                do i = 1, size(TTM_parameters%X)
+                    call find_in_1D_array(temp_space(:), TTM_parameters%X(i), j)
+                    if (temp_space(j) .eq. TTM_parameters%X(i)) then
+                        s_source(i) = intarget%absorp(j) * 1.d9 ! convert form [1/nm] to [1/m]
+                    else
+                        call interpolate(1, temp_space(j-1), temp_space(j), intarget%absorp(j-1), intarget%absorp(j), TTM_parameters%X(i), out_absorp)
+                        s_source(i) = out_absorp * 1.d9 ! convert form [1/nm] to [1/m]
+                    end if
+                end do
+            case default
+                call Beer_Lambert(laser, TTM_parameters, s_source)
+        end select
         ! end of preparation !
-        q = int(1.d-15/TTM_parameters%dt) !
+        q = int(TTM_parameters%tsave/TTM_parameters%dt) !
         if (q.lt.1) q = 1
         Nstep = 0   ! timestep for saving results
         
@@ -294,9 +325,9 @@ Module Solver
                 call CN_electrons(t_curr, TTM_parameters%dt, dz, Tel_temp, Tlat_temp, Cel_temp, kel_temp, G_temp, laser, s_source)
                 summ = sum(Tel_temp(2,:) - Tel_corrector(:))
                 corrector_step = corrector_step + 1
-			    if (corrector_step .ge. 1000000) then
-					    write (*,*) t_curr*1.d12, Tel_temp(1,1), Tel_temp(2,1), summ, corrector_step
-					    pause "Could not reach the neccessary precision, 1 000 000 corrections attempted"
+			    if (corrector_step .ge. 5000000) then
+					    write (*,*) t_curr*1.d12, Tel_corrector(1), Tel_temp(2,1), summ, corrector_step
+					    pause "Could not reach the neccessary precision, 5 000 000 corrections attempted"
                 endif
                 Tel_corrector(:) = Tel_temp(2,:)
                 Cel_temp(2,:) = electron_cap(Tel_temp(2,:), TTM_parameters)
@@ -307,22 +338,18 @@ Module Solver
             ! end of corrector part
             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             !energy conservation checking
-            Fabs = Fabs + sum(s_source(:))*dz * T_source(t_curr, laser)*TTM_parameters%dt
-            Eel = 0.0d0
-            Elat = 0.0d0
-            if (.not. allocated(Tint)) allocate(Tint(Nint))
-            if (.not. allocated(Cint)) allocate(Cint(Nint))
-            do i = 1, size(Tel_temp,2)
-                call linspace(TTM_parameters%Tel(i), Tel_temp(2,i), Nint, Tint)
-                Cint = electron_cap(Tint, TTM_parameters)
-                call Simpson(Tint, Cint, res)
-                Eel = Eel + res*dz
-                call linspace(TTM_parameters%Tlat(i), Tlat_temp(2,i), Nint, Tint)
-                Cint = lattice_cap(Tint, TTM_parameters)
-                call Simpson(Tint, Cint, res)
-                Elat = Elat + res*dz
-            enddo
-            DeltaE = abs(Eel+Elat-Fabs)/Fabs
+            !Fabs = Fabs + sum(s_source(:))*dz * T_source(t_curr, laser)*TTM_parameters%dt
+            !Eel = 0.0d0
+            !Elat = 0.0d0
+            !!if (.not. allocated(Tint)) allocate(Tint(Nint))
+            !!if (.not. allocated(Cint)) allocate(Cint(Nint))
+            !do i = 1, size(Tel_temp,2)
+            !    call Simpson_el(TTM_parameters%Tel(i), Tel_temp(2,i), TTM_parameters, res)
+            !    Eel = Eel + res*dz
+            !    call Simpson_lat(TTM_parameters%Tlat(i), Tlat_temp(2,i), TTM_parameters, res)
+            !    Elat = Elat + res*dz
+            !enddo
+            !DeltaE = abs(Eel+Elat-Fabs)/Fabs
             ! new initial values for next timestep
             t_curr = t_curr + TTM_parameters%dt
             Tlat_temp(1,:) = Tlat_temp(2,:)
@@ -332,12 +359,12 @@ Module Solver
                 !write(*,'(7(f12.4,2x))') t_curr*1.0d12, Tel_temp(2,1), Tlat_temp(2,1), Fabs, Eel, Elat, DeltaE
                 dd = dd + ddd
             endif
-            if (mod(Nstep, 10*q) .eq. 0 .or. Nstep .eq. 1) then
-                ! save data every 10 fs/dt 
-                call append(TTM_parameters%res_Fabs, Fabs)
-                call append(TTM_parameters%res_Eel, Eel)
-                call append(TTM_parameters%res_Elat, Elat)
-                call append(TTM_parameters%res_dE, DeltaE)
+            if (mod(Nstep, q) .eq. 0 .or. Nstep .eq. 1) then
+                ! save data every tsave/dt steps 
+                !call append(TTM_parameters%res_Fabs, Fabs)
+                !call append(TTM_parameters%res_Eel, Eel)
+                !call append(TTM_parameters%res_Elat, Elat)
+                !call append(TTM_parameters%res_dE, DeltaE)
                 call append(TTM_parameters%res_time, t_curr)
                 call column_stack(TTM_parameters%res_Tel, Tel_temp(1,:))
                 call column_stack(TTM_parameters%res_Tlat, Tlat_temp(1,:))
@@ -356,16 +383,65 @@ Module Solver
         deallocate(Cel_temp)
         deallocate(Clat_temp)
         deallocate(G_temp)
-        deallocate(temp_space)
+        if (allocated(temp_space)) deallocate(temp_space)
         deallocate(s_source)
             
         return
     end subroutine time_evolution
                     
-            
-        
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !!!     Additional subroutines for numerical integration and matrix equations solving	   !!!
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine Simpson_el(a, b, params, res)
+    ! Simpson integration for electron heat capacity over electron temperature
+        real(8), intent(in) :: a, b  ! lower and upper limits of integration
+        type(TTM), intent(in) :: params !   object with TTM functions (Te, Tl, ke, kl, Ce, Cl, G)
+        real(8), intent(out) :: res ! result
+        real(8) hx, dx,  x1, x2, r1, r2, res0
+        integer, parameter :: n = 50 
+        ! body of integration
+        res = 0.0d0
+        hx = a
+        res0 = 0.0d0
+        do while (hx .lt. b) ! no matter how many points, go till the end
+            dx = hx/real(n)
+            ! Simpson integration:
+            x1 = hx + dx/2.0d0
+            r1 = electron_cap(x1, params)
+            x2 = hx + dx
+            r2 = electron_cap(x2, params)
+            res = res + dx/6.0d0 * (res0 + 4.0d0*r1 + r2)/hx
+            res0 = res
+            hx = hx + dx
+        enddo
+        return
+    end subroutine Simpson_el        
     
-    
+    subroutine Simpson_lat(a, b, params, res)
+    ! Simpson integration for lattice heat capacity over lattice temperature
+        real(8), intent(in) :: a, b  ! lower and upper limits of integration
+        type(TTM), intent(in) :: params !   object with TTM functions (Te, Tl, ke, kl, Ce, Cl, G)
+        real(8), intent(out) :: res ! result
+        real(8) hx, dx,  x1, x2, r1, r2, res0
+        integer, parameter :: n = 50 
+        ! body of integration
+        res = 0.0d0
+        hx = a
+        res0 = 0.0d0
+        do while (hx .lt. b) ! no matter how many points, go till the end
+            dx = hx/real(n)
+            ! Simpson integration:
+            x1 = hx + dx/2.0d0
+            r1 = lattice_cap(x1, params)
+            x2 = hx + dx
+            r2 = lattice_cap(x2, params)
+            res = res + dx/6.0d0 * (res0 + 4.0d0*r1 + r2)/hx
+            res0 = res
+            hx = hx + dx
+        enddo
+        return
+    end subroutine Simpson_lat        
+
     !!!!!!!!!!!!!!!!!!!!!!!!!TRIDAG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Press, W. H., Teukolsky, S. A., Flannery, B. P., & Vetterling, W. T. (1992). 
     !Numerical recipes in Fortran 77: volume 1, volume 1 of Fortran numerical recipes: the art of scientific computing. Cambridge university press.
@@ -395,5 +471,5 @@ Module Solver
         enddo
         return
     end subroutine tridiag
-    
+   
 end module Solver

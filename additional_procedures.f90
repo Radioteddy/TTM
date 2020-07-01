@@ -5,17 +5,6 @@ module add_procedures
     
     contains
     
-    subroutine Simpson(x_arr, y_arr, res)
-    ! Simpson integration of y_arr over x_arr
-        real(8), dimension(:), intent(in) :: x_arr  ! array of x values. Equally spaced assumption 
-        real(8), dimension(:), intent(in) :: y_arr  ! array of y values y_arr = f(x_arr)
-        real(8), intent(out) :: res
-        real(8) h   ! step between two points of x_arr
-        h = x_arr(2) - x_arr(1)
-        res = h/3.0d0 * ( y_arr(1) + 4.0d0*sum(y_arr(2:size(y_arr)-1:2)) + 2.0d0*sum(y_arr(3:size(y_arr)-1:2)) + y_arr(size(y_arr)))
-        return
-    end subroutine Simpson
-    
     subroutine progress(string, ndone, ntotal)
     ! show progress bar of calculation
         character*(*) string
