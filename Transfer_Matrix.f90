@@ -74,14 +74,14 @@ module Transfer_Matrix
         !   relative transmission, reflection and absorption for both type of polarization
         select case(Laser%pol)
             case('s')
-                InTarget%T = abs(InTarget%tt)**2 *real(InTArget%nlayer(size(InTArget%nlayer))*cos(InTarget%theta(size(InTarget%theta)))) / &
-                dreal(InTArget%nlayer(1)*cos(InTarget%theta(1)))
+                InTarget%T = abs(InTarget%tt)**2 *real(InTarget%nlayer(size(InTarget%nlayer))*cos(InTarget%theta(size(InTarget%theta)))) / &
+                real(InTarget%nlayer(1)*cos(InTarget%theta(1)))
             case('p')
-                InTarget%T = abs(InTarget%tt)**2 *real(InTArget%nlayer(size(InTArget%nlayer))*cos(conjg(InTarget%theta(size(InTarget%theta))))) / &
-                real(InTArget%nlayer(1)*cos(conjg(InTarget%theta(1))))
+                InTarget%T = abs(InTarget%tt)**2 *real(InTarget%nlayer(size(InTarget%nlayer))*cos(conjg(InTarget%theta(size(InTarget%theta))))) / &
+                real(InTarget%nlayer(1)*cos(conjg(InTarget%theta(1))))
             case default ! default is p polarization
-                InTarget%T = abs(InTarget%tt)**2 *real(InTArget%nlayer(size(InTArget%nlayer))*cos(conjg(InTarget%theta(size(InTarget%theta))))) / &
-                real(InTArget%nlayer(1)*cos(conjg(InTarget%theta(1))))
+                InTarget%T = abs(InTarget%tt)**2 *real(InTarget%nlayer(size(InTarget%nlayer))*cos(conjg(InTarget%theta(size(InTarget%theta))))) / &
+                real(InTarget%nlayer(1)*cos(conjg(InTarget%theta(1))))
         end select
         InTarget%R = abs(InTarget%rr)**2
         InTarget%A = 1.0d0 - InTarget%T - InTarget%R

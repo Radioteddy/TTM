@@ -1,11 +1,14 @@
-Pt	!	material name
+Au	!	material name
+1	!	flag of space part of source (1=BL, 2=TMM). If 2, the next line will be skipped, you can use any values 
+(1.4684, 1.953)		100.0	0.0d0	! index of refraction, thickness of layer [nm], ballistic range [nm] (optional, if not, set zero)
 300.0d0	!	initial electron temperature (K)
-740.0d0	! electron heat capacity (J/m^3 K)
-72.0d0	! electron thermal conductivity (W/m K)
+71.0d0	! electron heat capacity (J/m^3 K)
+318.0d0	! electron thermal conductivity (W/m K)
 300.0d0 ! initial lattice temperature (K)
-2.78d6 ! lattice heat capacity (J/m^3 K)
+2.5d6 ! lattice heat capacity (J/m^3 K)
 0.0d0	! lattice thermal conductivity (W/m K)
-2.5d17 ! electron-phonon coupling (W/m^3 K)
+2.1d16 ! electron-phonon coupling (W/m^3 K)
 160	! number of space cells
 1.0d-17	! timestep [s]
-5.0d-12	! end of calculation time [s]
+1.0d-13	! time to save profiles [s]
+10.0d-12	! end of calculation time [s]

@@ -36,7 +36,8 @@ call Save_TTM(params, laser, output_path)
 !call save_absorption(laser, intarget, output_path)
 call Deallocate_all(InTarget, params)
 
+
+
 print*, 'Calculation done!'
 pause
 end program ttm_main
-
