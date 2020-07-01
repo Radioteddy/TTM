@@ -46,7 +46,7 @@ Module Solver
     space_source(:) = (1.0d0 - R) * exp(-parameters%X(:)/delta) / (delta*(1 - exp(-parameters%dlayer/delta)))
     return
     end subroutine Beer_Lambert
-            
+    
     subroutine Explicit_lattice(dt, dz, Tlat, Clat, klat, Tel, G)
     ! Explicit scheme for lattice temperature, initial predictions
     ! index 2 in arrays corresponds to the current and next timesteps
@@ -74,7 +74,7 @@ Module Solver
         return
     end subroutine Explicit_lattice
     
-    subroutine corrector_lattice(dt, dz, Tlat, Clat, klat, Tel, G)
+    subroutine corrector_lattice(dt, dz, Tlat, Clat, klat, Tel, G, dTlat)
     ! Crank-Nicolson scheme for lattice temperature, which is used as corrector
     ! index 2 in arrays corresponds to the current and next timesteps
         real(8), dimension(:,:), intent(inout) :: Tlat  ! Lattice temperature [K]
@@ -84,11 +84,10 @@ Module Solver
         real(8), dimension(:,:), intent(in) :: G        ! electron-phonon coupling [W/(K m^3)] on current timestep
         real(8), intent(in) :: dt   ! timestep [s]
         real(8), intent(in) :: dz   ! sapcestep [m] ! currently isn't used
-        real(8), dimension(:,:), allocatable :: dTlat  ! lattice temperature derivative
+        real(8), dimension(:,:), intent(inout) :: dTlat  ! lattice temperature derivative
         integer Narr    ! size of arrays
         
         Narr = size(Tlat,2)
-        allocate(dTlat(2,Narr))
         ! left boundary
         dTlat(:,1) = (klat(:,1) + klat(:,2)) * (Tlat(:,2) - Tlat(:,1))/Clat(:,1)/(dz*dz) &
                     + (Tel(:,1) - Tlat(:,1)) * G(:,1)/Clat(:,1) 
@@ -97,49 +96,16 @@ Module Solver
                         + (Tel(:,Narr) - Tlat(:,Narr)) * G(:,Narr)/Clat(:,Narr)
         ! intermediate points
         dTlat(:,2:Narr-1) = 0.5d0/Clat(:,2:Narr-1)/(dz*dz) * ( (klat(:,2:Narr-1) + klat(:,3:Narr))*(Tlat(:,3:Narr)-Tlat(:,2:Narr-1)) &
-                                            + (klat(:,2:Narr-1) + klat(:,1:Narr-2))*(Tlat(:,2:Narr-1)-Tlat(:,1:Narr-2)) ) &
+                                            - (klat(:,2:Narr-1) + klat(:,1:Narr-2))*(Tlat(:,2:Narr-1)-Tlat(:,1:Narr-2)) ) &
                             + (Tel(:,2:Narr-1) - Tlat(:,2:Narr-1)) * G(:,2:Narr-1)/Clat(:,2:Narr-1)
         ! Crank-Nicolson scheme
         Tlat(2,:) = Tlat(1,:) + 0.5d0*dt * (dTlat(1,:) + dTlat(2,:))
         !
-        deallocate(dTlat)
+!        deallocate(dTlat)
         return
     end subroutine corrector_lattice
     
-    subroutine CN_lattice(dt, dz, Tlat, Clat, Tel, G)
-    ! Crank-Nikolson scheme for lattice temperature
-    ! This scheme supposes that lattice heat capacity is excluded from equation for lattice temperature
-    ! currently useless
-    ! index 2 in arrays corresponds to the current and next timesteps
-        real(8), dimension(:,:), intent(inout) :: Tlat  ! Lattice temperature [K]
-        real(8), dimension(:,:), intent(in) :: Clat  ! lattice heat capacity [J/(K m^3)]
-        real(8), dimension(:,:), intent(in) :: Tel	    ! Electron temperature  [K]
-        real(8), dimension(:,:), intent(in) :: G        ! electron-phonon coupling [W/(K m^3)]
-        real(8), intent(in) :: dt   ! timestep [s]
-        real(8), intent(in) :: dz   ! sapcestep [m]
-        real(8), dimension(:), allocatable :: old_lat, new_lat, old_el, new_el    ! electron and lattice temperature coefficients for current and next timesteps
-        
-        ! allocate all arrays of coefficients
-        allocate(old_lat(size(Tlat,2)))
-        allocate(new_lat(size(Tlat,2)))
-        allocate(old_el(size(Tlat,2)))
-        allocate(new_el(size(Tlat,2)))
-        ! don't forget to add diffusion part and boundaries
-        ! lattice temperature on next timestep
-        old_lat(:) = 1.0d0 - 0.5d0*dt*G(1,:)/Clat(1,:)
-        new_lat(:) = 1.0d0 + 0.5d0*dt*G(2,:)/Clat(2,:)
-        old_el(:) = 0.5d0*dt*G(1,:)/Clat(1,:)
-        new_el(:) = 0.5d0*dt*G(2,:)/Clat(2,:)
-        Tlat(2,:) = ( Tlat(1,:)*old_lat(:) + Tel(1,:)*old_el(:) + Tel(2,:)*new_el(:) ) / new_lat(:)
-        ! deallocate coefficients
-        deallocate(old_lat)
-        deallocate(new_lat)
-        deallocate(old_el)
-        deallocate(new_el)
-        return
-    end subroutine CN_lattice
-    
-    subroutine CN_electrons(tcurr, dt, dz, Tel, Tlat, Cel, kel, G, laser, S_source)
+    subroutine CN_electrons(tcurr, dt, dz, Tel, Tlat, Cel, kel, G, laser, S_source, dTel)
     ! Crank-Nikolson scheme for lattice temperature
     ! index 2 in arrays corresponds to the current and next timesteps
         real(8), dimension(:,:), intent(in) :: Tlat     ! Lattice temperature [K]
@@ -149,6 +115,7 @@ Module Solver
         real(8), dimension(:,:), intent(in) :: kel   ! electron heat conductivity [W/(K m^3)]
         type(Source), intent(in) :: laser               ! object with parameters of laser
         real(8), dimension(:), intent(in) :: S_Source   ! space part of profile
+        real(8), dimension(:,:), intent(inout) :: dTel  ! electron temperature derivative
         real(8), intent(in) :: tcurr    ! current timepoint
         real(8), intent(in) :: dt       ! timestep [s]
         real(8), intent(in) :: dz       ! sapcestep [m]
@@ -156,10 +123,25 @@ Module Solver
         real(8), dimension(:), allocatable :: bn   ! coefficient for current spacestep
         real(8), dimension(:), allocatable :: cn   ! coefficient for next spacestep
         real(8), dimension(:), allocatable :: rn   ! right side
-        
         integer Narr   ! size of temporary arrays
         
         Narr = size(Tel,2)
+        
+        ! Time derivative of electron temperature
+        ! left boundary
+        dTel(:,1) = (kel(:,1) + kel(:,2)) * (Tel(:,2) - Tel(:,1))/Cel(:,1)/(dz*dz) &
+                    + (Tlat(:,1) - Tel(:,1)) * G(:,1)/Cel(:,1) 
+        ! right boundary
+        dTel(:,Narr) = -(kel(:,Narr-1) + kel(:,Narr)) * (Tel(:,Narr) - Tel(:,Narr-1))/Cel(:,Narr)/(dz*dz) &
+                        + (Tlat(:,Narr) - Tel(:,Narr)) * G(:,Narr)/Cel(:,Narr)
+        ! intermediate points
+        dTel(:,2:Narr-1) = 0.5d0/Cel(:,2:Narr-1)/(dz*dz) * ( (kel(:,2:Narr-1) + kel(:,3:Narr))*(Tel(:,3:Narr)-Tel(:,2:Narr-1)) &
+                                            - (kel(:,2:Narr-1) + kel(:,1:Narr-2))*(Tel(:,2:Narr-1)-Tel(:,1:Narr-2)) ) &
+                            + (Tlat(:,2:Narr-1) - Tel(:,2:Narr-1)) * G(:,2:Narr-1)/Cel(:,2:Narr-1)
+        
+        dTel(1,:) = dTel(1,:) + T_Source(tcurr, laser)*S_Source(:)/Cel(1,:)
+        dTel(2,:) = dTel(2,:) + T_Source(tcurr+dt, laser)*S_Source(:)/Cel(2,:)
+        ! Triagonal system solving
         ! allocate all arrays of coefficients
         allocate(an(Narr))
         allocate(bn(Narr))
@@ -182,7 +164,6 @@ Module Solver
                 + Tlat(2,Narr) * 0.5d0*dt*G(2,Narr)/Cel(2,Narr) + Tlat(1,Narr) * 0.5d0*dt*G(1,Narr)/Cel(1,Narr) &
                 + 0.5d0*dt*T_Source(tcurr, laser)*S_Source(Narr)/Cel(1,Narr) + 0.5d0*dt*T_Source(tcurr+dt, laser)*S_Source(Narr)/Cel(2,Narr)        
         ! define coefficients for internal gridpoints
-        
         an(2:Narr-1) = -0.5d0*dt/(dz*dz) * 0.5d0*(kel(2,1:Narr-2)+kel(2,2:Narr-1))/Cel(2,2:Narr-1)
         bn(2:Narr-1) =  1.0d0 + 0.5d0*dt/(dz*dz) * 0.5d0*((kel(2,1:Narr-2)+kel(2,2:Narr-1))+(kel(2,2:Narr-1)+kel(2,3:Narr)))/Cel(2,2:Narr-1) &
                             + 0.5d0*dt*G(2,2:Narr-1)/Cel(2,2:Narr-1) 
@@ -211,7 +192,8 @@ Module Solver
         type(TTM), intent(inout) :: TTM_parameters  !   object with TTM functions (Te, Tl, ke, kl, Ce, Cl, G)
          
         real(8) dz, t_curr, summ, t1, t2
-        real(8), dimension(:,:), allocatable :: Tel_temp, Tlat_temp, kel_temp, Cel_temp, Clat_temp, G_temp, klat_temp   ! temporary arrays of 2T system
+        real(8), dimension(:,:), allocatable :: Tel_temp, dTel_temp, Tlat_temp, dTlat_temp          !
+        real(8), dimension(:,:), allocatable :: kel_temp, Cel_temp, Clat_temp, G_temp, klat_temp    ! temporary arrays of 2T system
         real(8), dimension(:), allocatable :: Tel_corrector ! array for saving Tel for predictor-corrector scheme
         real(8), dimension(:), allocatable :: s_source      ! space part of source
         real(8), parameter :: eps = 1.d-4   ! predictor-corrector error
@@ -273,7 +255,11 @@ Module Solver
         Tel_temp(2,:) = 0.0d0
         allocate(Tlat_temp(2, size(TTM_parameters%Tel)))
         Tlat_temp(1,:) = TTM_parameters%Tlat(:)
-        Tlat_temp(2,:) = 0.0d0     
+        Tlat_temp(2,:) = 0.0d0
+        allocate(dTlat_temp(2, size(TTM_parameters%Tel)))
+        dTlat_temp(:,:) = 0.0d0
+        allocate(dTel_temp(2, size(TTM_parameters%Tel)))
+        dTel_temp(:,:) = 0.0d0
         ! later don't forget to add functions or reading from file for parameters below
         allocate(kel_temp(2, size(TTM_parameters%Tel)))
         allocate(Cel_temp(2, size(TTM_parameters%Tel)))
@@ -311,7 +297,7 @@ Module Solver
             G_temp(2,:) = coupling(Tel_temp(1,:), TTM_parameters)
             Clat_temp(2,:) = lattice_cap(Tlat_temp(2,:), TTM_parameters)
             klat_temp(2,:) = lattice_conduct(Tlat_temp(2,:), TTM_parameters)
-            call CN_electrons(t_curr, TTM_parameters%dt, dz, Tel_temp, Tlat_temp, Cel_temp, kel_temp, G_temp, laser, s_source)
+            call CN_electrons(t_curr, TTM_parameters%dt, dz, Tel_temp, Tlat_temp, Cel_temp, kel_temp, G_temp, laser, s_source, dTel_temp)
             ! End of predictor part
             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             ! Corrector part. New values for temperatures calculated semi-explicitly, and correct parameters of system ke, Ce, Cl, G
@@ -321,8 +307,8 @@ Module Solver
             Tel_corrector(:) = Tel_temp(2,:)
             summ = 1.0d0
             do while (summ .ge. eps)
-                call corrector_lattice(TTM_parameters%dt, dz, Tlat_temp, Clat_temp, klat_temp, Tel_temp, G_temp)
-                call CN_electrons(t_curr, TTM_parameters%dt, dz, Tel_temp, Tlat_temp, Cel_temp, kel_temp, G_temp, laser, s_source)
+                call corrector_lattice(TTM_parameters%dt, dz, Tlat_temp, Clat_temp, klat_temp, Tel_temp, G_temp, dTlat_temp)
+                call CN_electrons(t_curr, TTM_parameters%dt, dz, Tel_temp, Tlat_temp, Cel_temp, kel_temp, G_temp, laser, s_source, dTel_temp)
                 summ = sum(Tel_temp(2,:) - Tel_corrector(:))
                 corrector_step = corrector_step + 1
 			    if (corrector_step .ge. 5000000) then
@@ -338,33 +324,25 @@ Module Solver
             ! end of corrector part
             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             !energy conservation checking
-            !Fabs = Fabs + sum(s_source(:))*dz * T_source(t_curr, laser)*TTM_parameters%dt
-            !Eel = 0.0d0
-            !Elat = 0.0d0
-            !!if (.not. allocated(Tint)) allocate(Tint(Nint))
-            !!if (.not. allocated(Cint)) allocate(Cint(Nint))
-            !do i = 1, size(Tel_temp,2)
-            !    call Simpson_el(TTM_parameters%Tel(i), Tel_temp(2,i), TTM_parameters, res)
-            !    Eel = Eel + res*dz
-            !    call Simpson_lat(TTM_parameters%Tlat(i), Tlat_temp(2,i), TTM_parameters, res)
-            !    Elat = Elat + res*dz
-            !enddo
-            !DeltaE = abs(Eel+Elat-Fabs)/Fabs
+            Fabs = Fabs + sum(s_source(:))*dz * T_source(t_curr, laser)*TTM_parameters%dt
+            Eel = Eel + sum(Cel_temp(2,:)*dTel_temp(2,:))*dz*TTM_parameters%dt
+            Elat = Elat + sum(Clat_temp(2,:)*dTlat_temp(2,:))*dz*TTM_parameters%dt
+            DeltaE = abs(Eel+Elat-Fabs)/Fabs
             ! new initial values for next timestep
             t_curr = t_curr + TTM_parameters%dt
             Tlat_temp(1,:) = Tlat_temp(2,:)
             Tel_temp(1,:) = Tel_temp(2,:)
             if (Nstep .EQ. dd) then
                 call progress('Calculation:   ', dd, Nloops)
-                !write(*,'(7(f12.4,2x))') t_curr*1.0d12, Tel_temp(2,1), Tlat_temp(2,1), Fabs, Eel, Elat, DeltaE
+                !write(*,'(7(f12.4,2x))') t_curr*1.0d12, Tel_temp(2,1), Tlat_temp(2,1), Fabs, Elat, Eel, DeltaE
                 dd = dd + ddd
             endif
             if (mod(Nstep, q) .eq. 0 .or. Nstep .eq. 1) then
                 ! save data every tsave/dt steps 
-                !call append(TTM_parameters%res_Fabs, Fabs)
-                !call append(TTM_parameters%res_Eel, Eel)
-                !call append(TTM_parameters%res_Elat, Elat)
-                !call append(TTM_parameters%res_dE, DeltaE)
+                call append(ttm_parameters%res_fabs, fabs)
+                call append(ttm_parameters%res_eel, eel)
+                call append(ttm_parameters%res_elat, elat)
+                call append(ttm_parameters%res_de, deltae)
                 call append(TTM_parameters%res_time, t_curr)
                 call column_stack(TTM_parameters%res_Tel, Tel_temp(1,:))
                 call column_stack(TTM_parameters%res_Tlat, Tlat_temp(1,:))
@@ -379,6 +357,7 @@ Module Solver
         deallocate(Tel_temp)
         deallocate(Tel_corrector)
         deallocate(Tlat_temp)
+        deallocate(dTlat_temp)
         deallocate(kel_temp)
         deallocate(Cel_temp)
         deallocate(Clat_temp)
@@ -471,5 +450,38 @@ Module Solver
         enddo
         return
     end subroutine tridiag
-   
+    
+    subroutine CN_lattice(dt, dz, Tlat, Clat, Tel, G)
+    ! Crank-Nikolson scheme for lattice temperature
+    ! This scheme supposes that lattice heat capacity is excluded from equation for lattice temperature
+    ! currently useless
+    ! index 2 in arrays corresponds to the current and next timesteps
+        real(8), dimension(:,:), intent(inout) :: Tlat  ! Lattice temperature [K]
+        real(8), dimension(:,:), intent(in) :: Clat  ! lattice heat capacity [J/(K m^3)]
+        real(8), dimension(:,:), intent(in) :: Tel	    ! Electron temperature  [K]
+        real(8), dimension(:,:), intent(in) :: G        ! electron-phonon coupling [W/(K m^3)]
+        real(8), intent(in) :: dt   ! timestep [s]
+        real(8), intent(in) :: dz   ! sapcestep [m]
+        real(8), dimension(:), allocatable :: old_lat, new_lat, old_el, new_el    ! electron and lattice temperature coefficients for current and next timesteps
+        
+        ! allocate all arrays of coefficients
+        allocate(old_lat(size(Tlat,2)))
+        allocate(new_lat(size(Tlat,2)))
+        allocate(old_el(size(Tlat,2)))
+        allocate(new_el(size(Tlat,2)))
+        ! don't forget to add diffusion part and boundaries
+        ! lattice temperature on next timestep
+        old_lat(:) = 1.0d0 - 0.5d0*dt*G(1,:)/Clat(1,:)
+        new_lat(:) = 1.0d0 + 0.5d0*dt*G(2,:)/Clat(2,:)
+        old_el(:) = 0.5d0*dt*G(1,:)/Clat(1,:)
+        new_el(:) = 0.5d0*dt*G(2,:)/Clat(2,:)
+        Tlat(2,:) = ( Tlat(1,:)*old_lat(:) + Tel(1,:)*old_el(:) + Tel(2,:)*new_el(:) ) / new_lat(:)
+        ! deallocate coefficients
+        deallocate(old_lat)
+        deallocate(new_lat)
+        deallocate(old_el)
+        deallocate(new_el)
+        return
+    end subroutine CN_lattice  
+    
 end module Solver

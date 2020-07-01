@@ -9,27 +9,27 @@ def time_shape(t, tpulse):
 
 ttmpath = 'Saved\\TTM\\Au\\230.00_J_m_2_200.00_fs_400.00_nm'
 
-cdata = np.loadtxt(os.path.abspath(os.path.join(ttmpath, 'conservation_6.dat')))
+cdata = np.loadtxt(os.path.abspath(os.path.join(ttmpath, 'conservation_10.dat')))
 plt.figure(figsize=(8,6))
 ax = plt.subplot()
 l1 = ax.plot(cdata[:,0], cdata[:,1], label='F$_{abs}$')
 l2 = ax.plot(cdata[:,0], cdata[:,2], label='E$_{el}$')
-l3 = ax.plot(cdata[:,0], cdata[:,3], label='F$_{l}$')
-l4 = ax.plot(cdata[:,0], cdata[:,2]+cdata[:,3], lw=2, ls='--', label='F$_{abs}$')
+l3 = ax.plot(cdata[:,0], cdata[:,3], label='E$_{l}$')
+l4 = ax.plot(cdata[:,0], cdata[:,2]+cdata[:,3], lw=2, ls='--', label='E$_{l}$+E$_{el}$')
 ax1 = ax.twinx()
 l5 = ax1.plot(cdata[:,0], cdata[:,4]*100, lw=0.5, ls=':', label='$\delta$E', color='black')
 ax.set_xlabel('t (ps)')
 ax.set_ylabel('F (J/m$^2$)')
 ax1.set_ylabel('Error (%)')
 # added these lines
-lns = l1+l2+l3+l4
+lns = l1+l2+l3+l4+l5
 labs = [l.get_label() for l in lns]
 ax.legend(lns, labs, loc=0)
-plt.savefig('conservation.png')
+plt.savefig('conservation.png', dpi=150)
 plt.close()
 
 # My data
-ttm_data = np.loadtxt(os.path.abspath(os.path.join(ttmpath, 'profiles_6.dat')))
+ttm_data = np.loadtxt(os.path.abspath(os.path.join(ttmpath, 'profiles_10.dat')))
 time = np.unique(ttm_data[:, 0])
 num_uniq = time.shape[0]
 ind = np.where(ttm_data[:, 0] == time[1])[0][0]
