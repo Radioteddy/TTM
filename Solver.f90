@@ -366,60 +366,7 @@ Module Solver
         deallocate(s_source)
             
         return
-    end subroutine time_evolution
-                    
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!     Additional subroutines for numerical integration and matrix equations solving	   !!!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    subroutine Simpson_el(a, b, params, res)
-    ! Simpson integration for electron heat capacity over electron temperature
-        real(8), intent(in) :: a, b  ! lower and upper limits of integration
-        type(TTM), intent(in) :: params !   object with TTM functions (Te, Tl, ke, kl, Ce, Cl, G)
-        real(8), intent(out) :: res ! result
-        real(8) hx, dx,  x1, x2, r1, r2, res0
-        integer, parameter :: n = 50 
-        ! body of integration
-        res = 0.0d0
-        hx = a
-        res0 = 0.0d0
-        do while (hx .lt. b) ! no matter how many points, go till the end
-            dx = hx/real(n)
-            ! Simpson integration:
-            x1 = hx + dx/2.0d0
-            r1 = electron_cap(x1, params)
-            x2 = hx + dx
-            r2 = electron_cap(x2, params)
-            res = res + dx/6.0d0 * (res0 + 4.0d0*r1 + r2)/hx
-            res0 = res
-            hx = hx + dx
-        enddo
-        return
-    end subroutine Simpson_el        
-    
-    subroutine Simpson_lat(a, b, params, res)
-    ! Simpson integration for lattice heat capacity over lattice temperature
-        real(8), intent(in) :: a, b  ! lower and upper limits of integration
-        type(TTM), intent(in) :: params !   object with TTM functions (Te, Tl, ke, kl, Ce, Cl, G)
-        real(8), intent(out) :: res ! result
-        real(8) hx, dx,  x1, x2, r1, r2, res0
-        integer, parameter :: n = 50 
-        ! body of integration
-        res = 0.0d0
-        hx = a
-        res0 = 0.0d0
-        do while (hx .lt. b) ! no matter how many points, go till the end
-            dx = hx/real(n)
-            ! Simpson integration:
-            x1 = hx + dx/2.0d0
-            r1 = lattice_cap(x1, params)
-            x2 = hx + dx
-            r2 = lattice_cap(x2, params)
-            res = res + dx/6.0d0 * (res0 + 4.0d0*r1 + r2)/hx
-            res0 = res
-            hx = hx + dx
-        enddo
-        return
-    end subroutine Simpson_lat        
+    end subroutine time_evolution       
 
     !!!!!!!!!!!!!!!!!!!!!!!!!TRIDAG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Press, W. H., Teukolsky, S. A., Flannery, B. P., & Vetterling, W. T. (1992). 
