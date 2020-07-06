@@ -84,16 +84,16 @@ module Output
     ! internal variables
     integer i, j, k, FN, FNN, Nloops, dd, ddd, errnum
     character(200) Filename, Filename2, Filename3, command, header
-    character(8) flu, tpu, lam, ind
+    character(20) flu, tpu, lam, ind
     character(1) sep
     logical file_exist, file_opened, read_well    
     
     call get_path_separator(sep, read_well)
     if (.not. read_well) goto 12345    
     
-    write(lam, '(f6.2)') laser%lambda
-    write(flu, '(f6.2)') laser%Fluence
-    write(tpu, '(f6.2)') laser%tpulse*1.d15
+    write(lam, '(f20.2)') laser%lambda
+    write(flu, '(f20.2)') laser%Fluence
+    write(tpu, '(f20.2)') laser%tpulse*1.d15
     write(Filename,'(12a)') trim(adjustl(opath)), sep, 'TTM', sep, trim(adjustl(parameters%mat)), sep, &
                                                 trim(adjustl(flu)), '_J_m_2_', trim(adjustl(tpu)), '_fs_', trim(adjustl(lam)), '_nm'
     inquire(DIRECTORY=trim(adjustl(Filename)),exist=file_exist)    ! check if input file excists

@@ -5,10 +5,11 @@ Au	!	material name
 71.0d0	! electron heat capacity (J/m^3 K)
 318.0d0	! electron thermal conductivity (W/m K)
 300.0d0 ! initial lattice temperature (K)
-2.5d6 ! lattice heat capacity (J/m^3 K)
+2.5d6	2.9d6 ! lattice heat capacity (J/m^3 K) in: solid phase, liquid phase 
 0.0d0	! lattice thermal conductivity (W/m K)
 2.1d16 ! electron-phonon coupling (W/m^3 K)
-160	! number of space cells
+1.24d9	1337.33d0 ! latent heat of melting (J/m^3) and melting temperature (K)
+50	! number of space cells
 1.0d-17	! timestep [s]
 1.0d-13	! time to save profiles [s]
-10.0d-12	! end of calculation time [s]
+40.0d-12	! end of calculation time [s]

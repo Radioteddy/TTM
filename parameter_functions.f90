@@ -46,8 +46,14 @@ module param_funcs
     real(8), intent(in) :: Tl ! lattice temperature [K]
     type(TTM), intent(in) :: params ! object with TTM parameters
     real(8) Cl ! Lattice heat capacity [J/m^3 K]
+    real(8), parameter :: gamma = 1.0d-3
     ! here we define function
-    Cl = params%Clat ! * Tl !for example. Or specify any shape of dependence
+    if (Tl .le. params%Tmelt) then 
+        Cl = params%Clat  ! * Tl !for example. Or specify any shape of dependence
+    else
+        Cl = params%Cliq  !
+    end if
+    Cl = Cl + params%Hf/params%Tmelt * gamma/g_pi / ((Tl/params%Tmelt - 1.0d0)**2 + gamma**2 )! here we define effective heat capacity with accounting of latent heat of melting
     !
     end function lattice_cap
     

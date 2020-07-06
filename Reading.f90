@@ -125,7 +125,7 @@ module Reading
         integer, intent(out) :: Npoints
         ! internal variables
         character(100) matname
-        real(8) Te, Tl, Ce, Cl, ke, kl, Gel, dtt, tfin, dl, lb, ts
+        real(8) Te, Tl, Ce, Cl, ke, kl, Gel, dtt, tfin, dl, lb, ts, Cli, Hfus, Tm
         complex(8) nl
         integer FN, Reason, i, j, fl
         character(100) temp
@@ -166,13 +166,16 @@ module Reading
         READ(FN,*,IOSTAT=Reason) Tl 
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222
-        READ(FN,*,IOSTAT=Reason) Cl 
+        READ(FN,*,IOSTAT=Reason) Cl, Cli 
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222
         READ(FN,*,IOSTAT=Reason) kl 
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222
         READ(FN,*,IOSTAT=Reason) Gel 
+        call read_file(Reason, i, read_well) ! reports if everything read well
+        if (.not. read_well) goto 2222
+        READ(FN,*,IOSTAT=Reason) Hfus, Tm 
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222
         READ(FN,*,IOSTAT=Reason) Npoints
@@ -188,11 +191,15 @@ module Reading
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222
         write(*,'(a,f8.3,a,f8.3)') 'TTM parameters are: Te = ', Te, '; Tlat = ', Tl
-        write(*, '(a, 5e12.3)') 'Ce, Cl, ke, kl, G: ', Ce, Cl, ke, kl, Gel
+        write(*, '(a, 6e12.3)') 'Ce, Cl, Cliq, ke, kl, G: ', Ce, Cl, Cli, ke, kl, Gel
+        write(*, '(a, 2e12.3)') 'melting parameters Tmelt, Hf: ', Tm, Hfus        
         write(*, '(a, 3e12.3)') 'dt, tsave, tend: ', dtt, ts, tfin
         ! save to "parameters" object
         parameters%mat = trim(adjustl(matname))
         parameters%Clat = Cl
+        parameters%Cliq = Cli
+        parameters%Hf = Hfus
+        parameters%Tmelt = Tm
         parameters%klat = kl
         parameters%Cel = Ce
         parameters%kel = ke

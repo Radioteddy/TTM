@@ -43,7 +43,10 @@ module Objects
         real(8) Cel     ! electron heat capacity [J/m^3 K]
         real(8) kel     ! electron thermal conductivity [W/m K]
         real(8) klat      ! lattice thermal conductivity [W/m K]
-        real(8) Clat    ! lattice heat capacity [J/m^3 K]
+        real(8) Clat    ! lattice heat capacity [J/m^3 K] in solid phase
+        real(8) Cliq    ! lattice heat capacity [J/m^3 K] in liquid phase
+        real(8) Hf    ! latent heat of melting [J/m^3]
+        real(8) Tmelt    ! melting temperature [K]
         real(8) G       ! electron-phonon coupling [W/m^3 K]
         real(8) dt      ! timestep [s]
         real(8) tsave   ! time to save data [s]
