@@ -1,0 +1,12 @@
+# folders
+Saved/
+.vs/
+x64/
+# data files and images
+*.csv
+*.png
+# fortran project files
+*.sln
+*.vfproj
+# additional scripts
+*py

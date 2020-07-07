@@ -10,6 +10,6 @@ Au	!	material name
 2.1d16 ! electron-phonon coupling (W/m^3 K)
 1.24d9	1337.33d0 ! latent heat of melting (J/m^3) and melting temperature (K)
 50	! number of space cells
-1.0d-17	! timestep [s]
+1.0d-16	! timestep [s]
 1.0d-13	! time to save profiles [s]
-40.0d-12	! end of calculation time [s]
+20.0d-12	! end of calculation time [s]

@@ -27,16 +27,14 @@ type(Multilayer) intarget
 type(source) laser
 type(TTM) params
 character(100) output_path
+
 ! Body of ttm_main
 output_path = 'Saved'
-
 call Initialize_objects(laser, intarget, params)
 call time_evolution(laser, intarget, params)
 call Save_TTM(params, laser, output_path)
 !call save_absorption(laser, intarget, output_path)
 call Deallocate_all(InTarget, params)
-
-
 
 print*, 'Calculation done!'
 pause

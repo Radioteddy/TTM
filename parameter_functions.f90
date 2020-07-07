@@ -53,7 +53,9 @@ module param_funcs
     else
         Cl = params%Cliq  !
     end if
+    if (params%Tmelt .gt. 0.0d0) then
     Cl = Cl + params%Hf/params%Tmelt * gamma/g_pi / ((Tl/params%Tmelt - 1.0d0)**2 + gamma**2 )! here we define effective heat capacity with accounting of latent heat of melting
+    end if
     !
     end function lattice_cap
     
