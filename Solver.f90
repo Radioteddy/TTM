@@ -1,9 +1,9 @@
 Module Solver
     
-    use Constants
+    use Constants, only: g_Pi
     use Objects
-    use Transfer_Matrix
-    use add_procedures
+    use Transfer_Matrix, only: Fresnel, calculate_absorption
+    use add_procedures, only: progress, append, column_stack, interpolate, Find_in_1D_array
     use param_funcs
     
     implicit none
@@ -285,7 +285,7 @@ Module Solver
             ! Initial values for lattice temperature are calculated explicitly to use them in Crank-Nikolson scheme for electron temperature         
             Clat_temp(1,:) = lattice_cap(Tlat_temp(1,:), TTM_parameters)
             klat_temp(1,:) = lattice_conduct(Tlat_temp(1,:), TTM_parameters)
-            G_temp(1,:) = coupling(Tel_temp(1,:), TTM_parameters)
+            G_temp(1,:) = coupling(Tel_temp(1,:), Tlat_temp(1,:), TTM_parameters)
             Cel_temp(1,:) = electron_cap(Tel_temp(1,:), TTM_parameters)
             kel_temp(1,:) = electron_conduct(Tel_temp(1,:), Tlat_temp(1,:), TTM_parameters)
             call Explicit_lattice(TTM_parameters%dt, dz, Tlat_temp, Clat_temp(1,:), klat_temp(1,:), Tel_temp(1,:), G_temp(1,:))
@@ -294,7 +294,7 @@ Module Solver
             ! predictor parameters for electron temperature equation
             Cel_temp(2,:) = electron_cap(Tel_temp(1,:), TTM_parameters)
             kel_temp(2,:) = electron_conduct(Tel_temp(1,:), Tlat_temp(2,:), TTM_parameters)
-            G_temp(2,:) = coupling(Tel_temp(1,:), TTM_parameters)
+            G_temp(2,:) = coupling(Tel_temp(1,:), Tlat_temp(1,:), TTM_parameters)
             Clat_temp(2,:) = lattice_cap(Tlat_temp(2,:), TTM_parameters)
             klat_temp(2,:) = lattice_conduct(Tlat_temp(2,:), TTM_parameters)
             call CN_electrons(t_curr, TTM_parameters%dt, dz, Tel_temp, Tlat_temp, Cel_temp, kel_temp, G_temp, laser, s_source, dTel_temp)
@@ -303,7 +303,7 @@ Module Solver
             ! Corrector part. New values for temperatures calculated semi-explicitly, and correct parameters of system ke, Ce, Cl, G
             Cel_temp(2,:) = electron_cap(Tel_temp(2,:), TTM_parameters) ! corrector parameters for electron heat capacity
             kel_temp(2,:) = electron_conduct(Tel_temp(2,:), Tlat_temp(2,:), TTM_parameters)
-            G_temp(2,:) = coupling(Tel_temp(2,:), TTM_parameters)
+            G_temp(2,:) = coupling(Tel_temp(2,:), Tlat_temp(2,:), TTM_parameters)
             Tel_corrector(:) = Tel_temp(2,:)
             summ = 1.0d0
             do while (summ .ge. eps)
@@ -319,7 +319,7 @@ Module Solver
                 Cel_temp(2,:) = electron_cap(Tel_temp(2,:), TTM_parameters)
                 Clat_temp(2,:) = lattice_cap(Tlat_temp(2,:), TTM_parameters)
                 klat_temp(2,:) = lattice_conduct(Tlat_temp(2,:), TTM_parameters)
-                G_temp(2,:) = coupling(Tel_temp(2,:), TTM_parameters)
+                G_temp(2,:) = coupling(Tel_temp(2,:), Tlat_temp(2,:), TTM_parameters)
             enddo
             ! end of corrector part
             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -346,9 +346,9 @@ Module Solver
                 call append(TTM_parameters%res_time, t_curr)
                 call column_stack(TTM_parameters%res_Tel, Tel_temp(1,:))
                 call column_stack(TTM_parameters%res_Tlat, Tlat_temp(1,:))
-                if (t_curr .gt.(TTM_parameters%tend)) exit Timeloop        ! checking if simulation time has ended
 			endif
-            
+            if (t_curr .ge.(TTM_parameters%tend)) exit Timeloop        ! checking if simulation time has ended            
+        
         enddo Timeloop
         call CPU_TIME(t2)
         print*, 'total calculation time is: ', t2 - t1, ' seconds' 

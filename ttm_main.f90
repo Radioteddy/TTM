@@ -1,10 +1,11 @@
 ! Include all separate modules
-include 'Reading.f90'
 include 'Objects.f90'
 include 'Constants.f90'
+include 'additional_procedures.f90'
+include 'parameter_functions.f90'
 include 'Transfer_Matrix.f90'
 include 'Output.f90'
-include 'additional_procedures.f90'
+include 'Reading.f90'
 include 'Solver.f90'
 !****************************************************************************
 
@@ -36,6 +37,5 @@ call Save_TTM(params, laser, output_path)
 !call save_absorption(laser, intarget, output_path)
 call Deallocate_all(InTarget, params)
 
-print*, 'Calculation done!'
-pause
+pause 'Calculation done! Press Enter to return...'
 end program ttm_main

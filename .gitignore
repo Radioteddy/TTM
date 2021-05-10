@@ -8,5 +8,9 @@ x64/
 # fortran project files
 *.sln
 *.vfproj
+*.u2d
 # additional scripts
-*py
+*.py
+*.ipynb
+*.mat
+*.txt

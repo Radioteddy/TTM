@@ -1,6 +1,6 @@
-400		! laser wavelength (in nm)
+800		! laser wavelength (in nm)
 0		! incinent angle (deg)
 p		! polarization, must be s or p
-230.0d0		! incident fluence (in J/m^2)
-1.d-12	! pulse duration (FWHM) (in s)
-2.d-12	! center of gaussian peak (in s)
+90.0d1		! incident fluence (in J/m^2)
+70.d-15	! pulse duration (FWHM) (in s)
+210.d-15	! center of gaussian peak (in s)

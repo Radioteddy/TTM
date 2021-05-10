@@ -1,15 +1,15 @@
-Au	!	material name
-1	!	flag of space part of source (1=BL, 2=TMM). If 2, the next line will be skipped, you can use any values 
-(1.4684, 1.953)		100.0	0.0d0	! index of refraction, thickness of layer [nm], ballistic range [nm] (optional, if not, set zero)
+Ru	!	material name
+2	!	flag of space part of source (1=BL, 2=TMM). If 2, the next line will be ignored, you can use any values 
+(5.04, 3.94)		50.0	0.0d0	! index of refraction, thickness of layer [nm], ballistic range [nm] (optional, if not, set zero)
 300.0d0	!	initial electron temperature (K)
-71.0d0	! electron heat capacity (J/m^3 K)
-318.0d0	! electron thermal conductivity (W/m K)
+71.0d3	! electron heat capacity (J/m^3 K)
+0.647d-4	! electron thermal conductivity (W/m K)
 300.0d0 ! initial lattice temperature (K)
-2.5d6	2.9d6 ! lattice heat capacity (J/m^3 K) in: solid phase, liquid phase 
+2.96d6	6.3909d6 ! lattice heat capacity (J/m^3 K) in: solid phase, liquid phase 
 0.0d0	! lattice thermal conductivity (W/m K)
-2.1d16 ! electron-phonon coupling (W/m^3 K)
-1.24d9	1337.33d0 ! latent heat of melting (J/m^3) and melting temperature (K)
-50	! number of space cells
+1.0d17 ! electron-phonon coupling (W/m^3 K)
+3.13d9	2607.0d0 ! latent heat of melting (J/m^3) and melting temperature (K)
+200	! number of space cells
 1.0d-16	! timestep [s]
-1.0d-13	! time to save profiles [s]
+1.0d-14	! time to save profiles [s]
 20.0d-12	! end of calculation time [s]

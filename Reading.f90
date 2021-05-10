@@ -112,7 +112,7 @@ module Reading
         if (.not. read_well) goto 7777
 
         write(*,'(a,f8.3,a,f6.3,a,a,a)') 'Laser paramteres are: lambda = ', laser%lambda, '; theta_0 = ', laser%in_angle, '; polarisation is ', laser%pol, ' type'
-        write(*, '(a,f10.3,a,e15.5,a,e15.5)') 'incident fluence F = ', laser%fluence, '; FWHM tpulse = ', laser%tpulse, '; center of peak tpeak = ', laser%tpeak
+        write(*, '(a,f10.3,a,e15.5,a,e15.5)') 'incident fluence (F) = ', laser%fluence, '; FWHM (tpulse) = ', laser%tpulse, '; center of peak (tpeak) = ', laser%tpeak
 7777    if (.not. read_well) print*, 'Error in '//trim(adjustl(filename))//' file!' 
         inquire(unit=FN, opened=file_opened)    ! check if this file is opened
         if (file_opened) close(FN)             ! and if it is, close it
