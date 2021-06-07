@@ -52,14 +52,17 @@ module param_funcs
     !
     end function electron_cap
     
-    pure elemental function lattice_cap(Tl, params) result (Cl)
+    pure elemental function lattice_cap(Tl, dTl, params) result (Cl)
     ! function for lattice heat capacity
     real(8), intent(in) :: Tl ! lattice temperature [K]
-    ! real(8), intent(in) :: dTl ! gradient of lattice temperature in free points [K]; used for estimation of gamma. NOT READY YET
+    real(8), intent(in) :: dTl ! gradient of lattice temperature in free points [K]; used for estimation of gamma. NOT READY YET
     type(TTM), intent(in) :: params ! object with TTM parameters
     real(8) Cl ! Lattice heat capacity [J/m^3 K]
-    real(8), parameter :: gamma = 10.0d0 ! [K]
+    real(8) gamma ! [K]
+    integer power
     real(8), dimension(5), parameter :: A = (/2165402.11596, 3308.94109, -2.92427, 0.00128, -1.59295E-7/) ! coefficients of polynomial fitting
+
+    gamma = 10.0d0
     ! here we define function
     !Cl = params%Clat
     if (Tl .le. params%Tmelt) then 
@@ -69,7 +72,12 @@ module param_funcs
     end if
     if (params%Tmelt .gt. 0.0d0) then
     ! here we define effective heat capacity with accounting of latent heat of melting, see [1]
-    Cl = Cl + params%Hf * 1.0d0 / sqrt(2.0d0 * g_Pi) / gamma * dexp (-(Tl - params%Tmelt)**2 /2.0d0/gamma**2 )
+        if (gamma .lt. dTl) then
+            power = nint(log10(abs(dTl))) ! set width of delta-function no more than 3 spatial points
+            gamma = 10**power ! as we use central derivative it will be automatically satisfied just setting gamma = 10^(order of dTl)
+        end if
+        ! sign "-" before Hf means that during the heating and melting temperature propagates from surface in depth, so temperature gradient is negative
+        Cl = Cl - sign(params%Hf, dTl)  * 1.0d0 / sqrt(2.0d0 * g_Pi) / gamma * dexp (-(Tl - params%Tmelt)**2 /2.0d0/gamma**2 )
     end if
     !
     end function lattice_cap
@@ -89,7 +97,7 @@ module param_funcs
     ! fitted XTANT data for Ru. Or specify any shape of dependence
     G0 = A(1) + A(2)*Te + A(3)*Te**2.0d0 + A(4)*Te**3.0d0 + A(5)*Te**4.0d0 + &
         A(6)*Te**5.0d0 + A(7)*Te**6.0d0 + A(8)*Te**7.0d0 + A(9)*Te**8.0d0 + A(10)*Te**9.0d0
-    G = G0 * (1 + alpha*(Tl/Tl0 - 1)) 
+    G = G0 * (1.0d0 + alpha*(Tl/Tl0 - 1.0d0)) 
     !
     end function coupling    
     

@@ -194,6 +194,7 @@ Module Solver
         real(8) dz, t_curr, summ, t1, t2
         real(8), dimension(:,:), allocatable :: Tel_temp, dTel_temp, Tlat_temp, dTlat_temp          !
         real(8), dimension(:,:), allocatable :: kel_temp, Cel_temp, Clat_temp, G_temp, klat_temp    ! temporary arrays of 2T system
+        real(8), dimension(:), allocatable :: dTlat_dz ! array for spatial gradient of lattice temperature
         real(8), dimension(:), allocatable :: Tel_corrector ! array for saving Tel for predictor-corrector scheme
         real(8), dimension(:), allocatable :: s_source      ! space part of source
         real(8), parameter :: eps = 1.d-4   ! predictor-corrector error
@@ -260,6 +261,7 @@ Module Solver
         dTlat_temp(:,:) = 0.0d0
         allocate(dTel_temp(2, size(TTM_parameters%Tel)))
         dTel_temp(:,:) = 0.0d0
+        allocate(dTlat_dz(size(TTM_parameters%Tel))) 
         ! later don't forget to add functions or reading from file for parameters below
         allocate(kel_temp(2, size(TTM_parameters%Tel)))
         allocate(Cel_temp(2, size(TTM_parameters%Tel)))
@@ -283,7 +285,12 @@ Module Solver
             ! Predictor part
             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             ! Initial values for lattice temperature are calculated explicitly to use them in Crank-Nikolson scheme for electron temperature         
-            Clat_temp(1,:) = lattice_cap(Tlat_temp(1,:), TTM_parameters)
+            ! calculate spatial gradient of Tlat
+            dTlat_dz(1) = (Tlat_temp(1,2) - Tlat_temp(1,1))
+            dTlat_dz(2:size(dTlat_dz)-1) = (Tlat_temp(1,3:) - Tlat_temp(1,:size(dTlat_dz)-2))
+            dTlat_dz(size(dTlat_dz)) = (Tlat_temp(1,size(dTlat_dz)) - Tlat_temp(1,size(dTlat_dz)-1))
+            ! calculate parameters
+            Clat_temp(1,:) = lattice_cap(Tlat_temp(1,:), dTlat_dz(:), TTM_parameters)
             klat_temp(1,:) = lattice_conduct(Tlat_temp(1,:), TTM_parameters)
             G_temp(1,:) = coupling(Tel_temp(1,:), Tlat_temp(1,:), TTM_parameters)
             Cel_temp(1,:) = electron_cap(Tel_temp(1,:), TTM_parameters)
@@ -292,10 +299,15 @@ Module Solver
             !call CN_lattice(TTM_parameters%dt, dz, Tlat_temp, Clat_temp, Tel_temp, G_temp)
             !
             ! predictor parameters for electron temperature equation
+            ! calculate spatial gradient of Tlat
+            dTlat_dz(1) = (Tlat_temp(2,2) - Tlat_temp(2,1))
+            dTlat_dz(2:size(dTlat_dz)-1) = (Tlat_temp(2,3:) - Tlat_temp(2,:size(dTlat_dz)-2))
+            dTlat_dz(size(dTlat_dz)) = (Tlat_temp(2,size(dTlat_dz)) - Tlat_temp(2,size(dTlat_dz)-1))
+            ! calculate parameters
             Cel_temp(2,:) = electron_cap(Tel_temp(1,:), TTM_parameters)
             kel_temp(2,:) = electron_conduct(Tel_temp(1,:), Tlat_temp(2,:), TTM_parameters)
             G_temp(2,:) = coupling(Tel_temp(1,:), Tlat_temp(1,:), TTM_parameters)
-            Clat_temp(2,:) = lattice_cap(Tlat_temp(2,:), TTM_parameters)
+            Clat_temp(2,:) = lattice_cap(Tlat_temp(2,:), dTlat_dz(:), TTM_parameters)
             klat_temp(2,:) = lattice_conduct(Tlat_temp(2,:), TTM_parameters)
             call CN_electrons(t_curr, TTM_parameters%dt, dz, Tel_temp, Tlat_temp, Cel_temp, kel_temp, G_temp, laser, s_source, dTel_temp)
             ! End of predictor part
@@ -316,8 +328,13 @@ Module Solver
 					    pause "Could not reach the neccessary precision, 5 000 000 corrections attempted"
                 endif
                 Tel_corrector(:) = Tel_temp(2,:)
+                ! calculate spatial gradient of Tlat
+                dTlat_dz(1) = (Tlat_temp(2,2) - Tlat_temp(2,1))
+                dTlat_dz(2:size(dTlat_dz)-1) = (Tlat_temp(2,3:) - Tlat_temp(2,:size(dTlat_dz)-2))
+                dTlat_dz(size(dTlat_dz)) = (Tlat_temp(2,size(dTlat_dz)) - Tlat_temp(2,size(dTlat_dz)-1))
+                ! calculate parameters
                 Cel_temp(2,:) = electron_cap(Tel_temp(2,:), TTM_parameters)
-                Clat_temp(2,:) = lattice_cap(Tlat_temp(2,:), TTM_parameters)
+                Clat_temp(2,:) = lattice_cap(Tlat_temp(2,:), dTlat_dz(:), TTM_parameters)
                 klat_temp(2,:) = lattice_conduct(Tlat_temp(2,:), TTM_parameters)
                 G_temp(2,:) = coupling(Tel_temp(2,:), Tlat_temp(2,:), TTM_parameters)
             enddo
@@ -358,6 +375,7 @@ Module Solver
         deallocate(Tel_corrector)
         deallocate(Tlat_temp)
         deallocate(dTlat_temp)
+        deallocate(dTlat_dz)
         deallocate(kel_temp)
         deallocate(Cel_temp)
         deallocate(Clat_temp)
