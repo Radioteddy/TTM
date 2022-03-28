@@ -24,15 +24,10 @@ accounting transfer-matrix absorption profile
     Now is FOR ONE LAYER!
     See details in file
     
-
-### laser_parameters.txt
-    This file contains laser specifications.
-    See details in file
-
 ---
 
 ### Other notes:
 
 ---
 
-### current version: 0.02
+### current version: 0.041
