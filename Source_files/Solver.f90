@@ -43,9 +43,33 @@ Module Solver
     !        T = abs(tt)**2 * real(parameters%n*cos(theta_t)) / real(n_i*cos(theta_i))
     !    end select
     delta = (laser%lambda * 1.d-9) / (4*g_pi*aimag(parameters%n)) + parameters%l_bal ! penetration depth
-    space_source(:) = (1.0d0 - R) * exp(-parameters%X(:)/delta) / (delta*(1 - exp(-parameters%dlayer/delta)))
+    space_source(:) = (1.0d0 - R) * exp(-parameters%X(:)/delta) / delta !(delta*(1 - exp(-parameters%dlayer/delta)))
     return
     end subroutine Beer_Lambert
+    
+    subroutine Homogeneous(laser, parameters, space_source)
+    ! space part of source according Beer-Lambert law
+    type(Source), intent(in) :: laser   ! object with parameters of laser
+    type(TTM), intent(in) :: parameters ! object with TTM parameters
+    real(8), dimension(:), intent(out) :: space_source    ! space part of source [1/m]
+    real(8) delta, R, T
+    complex(8) rr, tt, theta_t, theta_i, n_i
+    
+    theta_i = cmplx(laser%in_angle)   ! complex incident angle
+    n_i = (1.0d0, 0.0d0) ! complex index of refraction of vacuum ambient
+    call Fresnel(theta_i, n_i, parameters%n, laser, theta_t, rr, tt) ! calculate Fresnel equations
+    R = abs(rr)**2
+    !select case(laser%pol)
+    !    case('s')
+    !        T = abs(tt)**2 * real(parameters%n*cos(theta_t)) / real(n_i*cos(theta_i))
+    !    case('p')
+    !        T = abs(tt)**2 * real(parameters%n*cos(conjg(theta_t))) / real(n_i*cos(conjg(theta_i)))
+    !    case default 
+    !        T = abs(tt)**2 * real(parameters%n*cos(theta_t)) / real(n_i*cos(theta_i))
+    !    end select
+    space_source(:) = (1.0d0 - R) / parameters%dlayer
+    return
+    end subroutine Homogeneous
     
     subroutine Explicit_lattice(dt, dz, Tlat, Clat, klat, Tel, G)
     ! Explicit scheme for lattice temperature, initial predictions
@@ -214,9 +238,13 @@ Module Solver
         ! prepare space part of source !
         allocate(s_source(size(TTM_parameters%X)))
         select case(TTM_parameters%flag)
-            case(1) ! Beer-Lambert law
-                call Beer_Lambert(laser, TTM_parameters, s_source)
-            case(2) ! Transfer-matrix algorithm
+            case(0) ! Homogeneous heating with energy density equal to incident
+                s_source(:) = 1.0d0/TTM_parameters%dlayer
+            case(1) ! Homogeneous heating accounting reflection (NOT FINISHED YET!)
+                call Homogeneous(laser, TTM_parameters, s_source)
+            case(2) ! Beer-Lambert law
+                call Beer_Lambert(laser, TTM_parameters, s_source) !(NOT FINISHED YET!)
+            case(3) ! Transfer-matrix algorithm
                 ind = findloc(intarget%materials, TTM_parameters%mat, dim=1)
                 width = 0.0d0
                 if (ind .gt. 3) then    
@@ -368,7 +396,7 @@ Module Solver
         
         enddo Timeloop
         call CPU_TIME(t2)
-        print*, 'total calculation time is: ', t2 - t1, ' seconds' 
+        ttm_parameters%calctime = t2 - t1
         
         ! deallocate all temporary arrays
         deallocate(Tel_temp)
@@ -401,13 +429,13 @@ Module Solver
         real(8) ki, temp(NMAX)
 
         n = size(T)
-        if (b(1) .lt. 1.d-100) pause "tridag: equations must be rewritted"
+        if (b(1) .lt. 1.d-100) pause "tridag: equations must be rewritten"
         ki=b(1)
         T(1)=r(1)/ki
         do j=2,n ! Decomposition and forward substitution
             temp(j)=c(j-1)/ki
             ki=b(j)-a(j)*temp(j)
-            if (ki.lt.1.d-100) pause "tridag: equations must be rewritted"
+            if (ki.lt.1.d-100) pause "tridag: equations must be rewrittenz`"
             T(j)=(r(j)-a(j)*T(j-1))/ki
         enddo
         do j=n-1,1,-1 ! Backsubstitution

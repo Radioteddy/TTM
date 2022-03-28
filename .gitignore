@@ -1,16 +1,30 @@
 # folders
 Saved/
+MD_Ru/
 .vs/
 x64/
 # data files and images
 *.csv
 *.png
+*.dat
+*.txt
+*.xlsx
+*.mp4
+*.gif
+*.html
 # fortran project files
 *.sln
 *.vfproj
 *.u2d
+*.obj
+*.mod
 # additional scripts
 *.py
 *.ipynb
 *.mat
-*.txt
+*.opju
+*.bat
+# executables
+*.exe
+# test units
+test.*

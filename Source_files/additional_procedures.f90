@@ -14,17 +14,17 @@ module add_procedures
         if (100.0*ndone/ntotal .GE. 100.0d0) then
             write(0,'(a,$)') '                                                                                   ',char(13)
         else
-            write(prog,'(a25,1x,''['')') string
+            write(prog,'(a20,1x,''['')') trim(string)
             do i=1,40
-                prog(27+i:27+i)=' '
+                prog(22+i:22+i)=' '
             enddo
-            write(prog(44:51),'(f7.2,''%'')') 100.0*ndone/ntotal
+            write(prog(39:45),'(f5.2,''%'')') 100.0*ndone/ntotal
             do i=1,40
                 if ((1.0*ndone/ntotal).gt.(1.0*i/40)) then
-                    if (prog(27+i:27+i).eq.' ') prog(27+i:27+i)='-'
+                    if (prog(22+i:22+i).eq.' ') prog(22+i:22+i)='-'
                 endif
             enddo
-            prog(67:67)=']'
+            prog(62:62)=']'
             write(0,'(a,a,$)') prog(1:77),char(13)
             return
         endif
@@ -115,7 +115,7 @@ module add_procedures
         return
     end subroutine Column_stack
     
-    subroutine Interpolate(Iflag, E1, E2, Sigma1, Sigma2, E_needed, OUT_value)
+    pure subroutine Interpolate(Iflag, E1, E2, Sigma1, Sigma2, E_needed, OUT_value)
         ! Interpolation between two values with different methods:
         integer, intent(in) :: Iflag ! what kind of interpolation to use
         real(8), intent(in) :: E1, E2, Sigma1, Sigma2, E_needed  ! input data: X and Y points
@@ -163,7 +163,7 @@ module add_procedures
     return    
     end subroutine linspace  
     
-    subroutine Find_in_1D_array(Array, Value, Number)
+    pure subroutine Find_in_1D_array(Array, Value, Number)
         REAL(8), dimension(:), INTENT(in) :: Array ! in which we are looking for the Value
         REAL(8), INTENT(in) :: Value   ! to be found in the array as near as possible
         integer, INTENT(out) :: Number ! number of the element which we are looking for 
@@ -174,5 +174,40 @@ module add_procedures
         enddo
         Number = i
     end subroutine Find_in_1D_array
+
+    pure subroutine Find_in_monotonous_1D_array(Array, Value0, Number)
+       REAL(8), dimension(:), INTENT(in) :: Array ! in which we are looking for the Value
+       REAL(8), INTENT(in) :: Value0   ! to be found in the array as near as possible
+       integer, INTENT(out) :: Number ! number of the element which we are looking for 
+       integer i, N, i_cur, i_1, i_2, coun
+       real(8) temp_val, val_1, val_2
+
+           N = size(Array)
+           if (Value0 .LE. Array(1)) then ! it's the first value, no need to search
+               i_cur = 1
+           else if (Value0 .GE. Array(N)) then ! it's the last value, no need to search
+               i_cur = N
+           else
+               i_1 = 1
+               i_2 = N
+               i_cur = FLOOR((i_1+i_2)/2.0)
+               temp_val = Array(i_cur)
+               coun = 0
+               do ! until the Value is in between Array(i_cur) and Array(i_cur+1) => we found i_cur
+                    if ((Value0 .GE. Array(i_cur)) .AND. (Value0 .LT. Array(i_cur+1))) exit ! when the Value is in between Array(i_cur) and Array(i_cur+1) => we found i_cur
+                    if (temp_val .LE. Value0) then
+                       i_1 = i_cur
+                    else
+                       i_2 = i_cur
+                    endif
+                    i_cur = FLOOR((i_1+i_2)/2.0)
+                    temp_val = Array(i_cur)
+                    coun = coun + 1
+               enddo
+           endif
+       Number = i_cur
+    end subroutine Find_in_monotonous_1D_array
+
+    
     
 end module add_procedures

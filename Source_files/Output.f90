@@ -35,7 +35,7 @@ module Output
         endif
     endif
     write(*,'(a)') '--------------------------------'
-    write(*,'(a,a)') 'The outputs with absorption profile will be storred in the folder:', trim(adjustl(Filename))
+    write(*,'(a)') 'The outputs with absorption profile will be storred in the folder:'//NEW_LINE('a')// trim(adjustl(Filename))
     
     i = 0
     Filename2 = trim(adjustl(Filename))//sep//'absorption.dat'
@@ -63,7 +63,7 @@ module Output
     ddd = int(Nloops/100.0d0)
     dd = ddd  
     do i = 1, size(InTarget%Absorp)
-        write(FN, '(e10.3,a,e10.3)') InTarget%spacegrid(i), '       ', InTarget%Absorp(i)
+        write(FN, '(e15.8,a,e15.8)') InTarget%spacegrid(i), '       ', InTarget%Absorp(i)
         if (i .EQ. dd) then
             call progress('Save to output:   ', dd, Nloops)
             dd = dd + ddd
@@ -84,7 +84,7 @@ module Output
     ! internal variables
     integer i, j, k, FN, FNN, Nloops, dd, ddd, errnum
     character(200) Filename, Filename2, Filename3, command, header
-    character(20) flu, tpu, lam, ind
+    character(20) flu, tpu, lam, ind, th
     character(1) sep
     logical file_exist, file_opened, read_well    
     
@@ -94,8 +94,16 @@ module Output
     write(lam, '(f20.2)') laser%lambda
     write(flu, '(f20.2)') laser%Fluence
     write(tpu, '(f20.2)') laser%tpulse*1.d15
-    write(Filename,'(12a)') trim(adjustl(opath)), sep, 'TTM', sep, trim(adjustl(parameters%mat)), sep, &
-                                                trim(adjustl(flu)), '_J_m_2_', trim(adjustl(tpu)), '_fs_', trim(adjustl(lam)), '_nm'
+
+    select case(parameters%flag)
+        case(3) ! Trasfer-matrix
+            write(th,  '(f20.2)') parameters%dlayer
+        case default 
+            write(th,  '(f20.2)') parameters%dlayer*1.0d9
+        end select
+    
+        write(Filename,'(15a)') trim(adjustl(opath)), sep, 'TTM', sep, trim(adjustl(parameters%mat)), sep, trim(adjustl(th)), '_nm', sep, &
+                                                trim(adjustl(flu)), '_J_m2_', trim(adjustl(tpu)), '_fs_', trim(adjustl(lam)), '_nm'
     inquire(DIRECTORY=trim(adjustl(Filename)),exist=file_exist)    ! check if input file excists
     if (.not. file_exist) then
         command='mkdir '//trim(adjustl(Filename)) ! to create a folder use this command
@@ -105,8 +113,8 @@ module Output
             print *, 'Error ', errnum
         endif
     endif
-    write(*,'(a)') '--------------------------------'
-    write(*,'(a,a)') 'The outputs with TTM profiles will be storred in the folder: ', trim(adjustl(Filename))
+    write(*,'(a)') 'The outputs with TTM profiles will be storred in the folder: '//NEW_LINE('a')// trim(adjustl(Filename))
+    
     
     ! check if profile.dat file exists
     i = 0
