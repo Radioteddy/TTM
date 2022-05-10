@@ -37,13 +37,13 @@ module Objects
         real(8) Fluence	 ! incident fluence [J/m^2]
     end type Source
 
-    type :: ce_spln
+    type :: spln
         integer nx       !! the number of interpolation points in \(x\).
         integer kx       !! order of polynomial pieces in \(x\).
         integer inbvx    !! initialization parameter which must be set to 1 the first time this routine is called,
         real(8), dimension(:), allocatable :: tx    !! sequence of knots defining the piecewise polynomial in the \(x\) direction.
         real(8), dimension(:), allocatable :: bcoef !! the b-spline coefficients computed by [[db1ink]].       
-    end type ce_spln
+    end type spln
         
     type :: TTM
     ! two-temperature model parameters
@@ -63,12 +63,15 @@ module Objects
         ! electron subsystem parameters
         integer cel_flag ! flag of which model for electron capacity is used
         real(8) Cel     ! electron heat capacity constant [J/m^3]: Cel -> Cel*Te
-        type(ce_spln) :: ce_spline ! parameters of B-spline interpolation of tabulated data
+        type(spln) :: ce_spline ! parameters of B-spline interpolation of tabulated data
         integer kel_flag ! flag of which model for electron conductivity is used
         real(8) kel     ! electron thermal conductivity constant: [W/m K]
         real(8) A, B, D    ! constants for thermal conductivity in Drude model: ke = D*Ce(Te)/(A*Te^2 + B*Tl)
-        integer g_flag ! flag of which model for e-ph coupling is used
-        real(8) G       ! electron-phonon coupling [W/m^3 K]
+        ! coupling parameters
+        integer g_flag ! flag of which model for e-ph coupling is used. 0 = constant G, 1 = G(Te), 2 = G(Te,Ti)
+        real(8) G       ! electron-phonon coupling constant [W/m^3 K]
+        type(spln) :: g_spline ! parameters of B-spline interpolation of tabulated data
+        real(8) g_alpha ! linear coefficient for G(Ti) dependence
         ! lattice subsystem parameters
         real(8) klat      ! lattice thermal conductivity [W/m K]
         integer cl_flag ! flag of which model for lattice capacity is used
@@ -79,6 +82,7 @@ module Objects
         real(8) Tmelt    ! melting temperature [K]
         ! results of calculation
         real(8), dimension(:), allocatable :: res_time      ! timegrid [s]
+        real(8), dimension(:), allocatable :: res_abs       ! absorption profile [1/nm]
         real(8), dimension(:,:), allocatable :: res_Tel     ! final electron temperature (res_time,X)
         real(8), dimension(:,:), allocatable :: res_Tlat    ! final lattice temperature (res_time,X)
         real(8), dimension(:), allocatable :: res_Fabs      ! absorbed fluence (res_time)

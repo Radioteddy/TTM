@@ -1,5 +1,5 @@
 3	! Number of layers for calculation. 
 Air	1	1.d37	! refractive index and width of layer (in nm). For ambient and last layer width should be infinite, use 1.d37
-Ru	(5.04, 3.94)		120
-Si	(3.6941, 0.0065435)	1.d37
+Au	(1.4684, 1.9530)		20.0d0
+SiO2	(1.4701, 0.00e0)	1.d37
 1000	!Number of points for calculation. Must be greather than total thikness of multilayer structure

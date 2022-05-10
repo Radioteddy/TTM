@@ -72,18 +72,20 @@
         integer, intent(out) :: Npoints
         ! internal variables
         character(100) matname
-        real(8) Te, Tl, Ce, Cl, ke, kl, Gel, dtt, tfin, dl, lb, ts, Cli, Hfus, Tm, A, B, D
+        real(8) Te, Tl, Ce, Cl, ke, kl, Gel, dtt, tfin, dl, lb, ts, Cli, Hfus, Tm, A, B, D, alpha
         complex(8) nl
         integer FN, Reason, i, j, fl, fl_cl, fl_mel, fl_cel, fl_ke, fl_g
         character(100) temp
         character(100) filename ! file with input parameters
         character(100) Ce_filename ! file with Ce data
+        character(100) G_filename ! file with G(Te) data
         character(100) Error_descript  ! to write a description of an error, if any
         logical file_exist    ! to check where file to be open exists
         logical file_opened   ! to check if a file is still opened
         logical read_well     ! to check if we read the file without errors
         ! B-spline interpolation variables
         real(8), dimension(:,:), allocatable :: Ce_tab ! tabulated values of electron heat capacity
+        real(8), dimension(:,:), allocatable :: G_tab ! tabulated values of electron-phonon coupling
         integer iflag
         
         filename = 'TTM_parameters.txt'
@@ -121,7 +123,7 @@
         READ(FN,*,IOSTAT=Reason) laser%tpeak 
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222
-        READ(FN,*,IOSTAT=Reason) fl 
+        READ(FN,*,IOSTAT=Reason) fl
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222
         READ(FN,*,IOSTAT=Reason) nl, dl, lb
@@ -151,12 +153,21 @@
         READ(FN,*,IOSTAT=Reason) A, B, D 
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222 
+        READ(FN,*,IOSTAT=Reason) ! indicator of copling section
+        call read_file(Reason, i, read_well) ! reports if everything read well
+        if (.not. read_well) goto 2222  
         READ(FN,*,IOSTAT=Reason) fl_g 
+        call read_file(Reason, i, read_well) ! reports if everything read well
+        if (.not. read_well) goto 2222 
+        READ(FN,*,IOSTAT=Reason) G_filename 
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222 
         READ(FN,*,IOSTAT=Reason) Gel 
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222        
+        READ(FN,*,IOSTAT=Reason) alpha 
+        call read_file(Reason, i, read_well) ! reports if everything read well
+        if (.not. read_well) goto 2222 
         READ(FN,*,IOSTAT=Reason) ! indicator of ion subsystem section
         call read_file(Reason, i, read_well) ! reports if everything read well
         if (.not. read_well) goto 2222        
@@ -229,26 +240,35 @@
         write(*,'(a)') '---------------------------------------------------------------'
         ! save to "parameters" object
         parameters%mat = trim(adjustl(matname))
+        ! e ballisistic length (optional)
+        parameters%l_bal = lb*1.d-9  ! electron ballistic length in m
+        ! e heat capacity
+        parameters%cel_flag = fl_cel
+        parameters%Cel = Ce
+        ! e heat conductivity
+        parameters%kel_flag = fl_ke
+        parameters%kel = ke
+        ! e ph coupling
+        parameters%g_flag = fl_g
+        parameters%G = Gel
+        parameters%g_alpha = alpha
+        ! l heat capacity
         parameters%Clat = Cl
+        ! melt capacity (optional)
+        parameters%melt_flag = fl_mel
         parameters%Cliq = Cli
         parameters%Hf = Hfus
         parameters%Tmelt = Tm
-        parameters%klat = kl
-        parameters%Cel = Ce
-        parameters%kel = ke
-        parameters%G = Gel
-        parameters%dt = dtt
-        parameters%tsave = ts
-        parameters%tend = tfin
-        parameters%flag = fl
         parameters%cl_flag = fl_cl
-        parameters%cel_flag = fl_cel
-        parameters%kel_flag = fl_ke
-        parameters%g_flag = fl_g
-        parameters%melt_flag = fl_mel
-        parameters%dlayer = dl*1.d-9 ! convert from nm to m
-        parameters%l_bal = lb*1.d-9  ! convert from nm to m
-        parameters%n = nl
+        ! l heat conductivity
+        parameters%klat = kl
+        ! simulation parameters
+        parameters%dt = dtt ! integration step
+        parameters%tsave = ts ! save to file step
+        parameters%tend = tfin ! end of calc time
+        parameters%flag = fl ! absorption profile flag
+        parameters%dlayer = dl*1.d-9 ! thickness of layer in m
+        parameters%n = nl ! number of simulation cells
         
         
         ! if Ce tabulated read the table and compute spline coeffs
@@ -261,6 +281,18 @@
             call db1ink(Ce_tab(:,1), parameters%ce_spline%nx, Ce_tab(:,2), parameters%ce_spline%kx, 0, parameters%ce_spline%tx, parameters%ce_spline%bcoef, iflag)
             if (iflag .ne. 0) print*, 'Error initializing B-spline: '//get_status_message(iflag)
         endif
+        
+        ! if Ce tabulated read the table and compute spline coeffs
+        if (fl_g .ne. 0) then
+            call read_2Ddatafile(G_filename, G_tab)
+            parameters%g_spline%nx = size(G_tab,1)
+            parameters%g_spline%kx = 4
+            if (.not. allocated(parameters%g_spline%tx)) allocate(parameters%g_spline%tx(parameters%g_spline%nx+parameters%g_spline%kx))
+            if (.not. allocated(parameters%g_spline%bcoef)) allocate(parameters%g_spline%bcoef(parameters%g_spline%nx))
+            call db1ink(G_tab(:,1), parameters%g_spline%nx, G_tab(:,2), parameters%g_spline%kx, 0, parameters%g_spline%tx, parameters%g_spline%bcoef, iflag)
+            if (iflag .ne. 0) print*, 'Error initializing B-spline: '//get_status_message(iflag)
+        endif
+        
         
         if (.not. allocated(parameters%Tel)) allocate(parameters%Tel(Npoints))
         parameters%Tel(:) = Te

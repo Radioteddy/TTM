@@ -126,15 +126,28 @@ module param_funcs
     type(TTM), intent(in) :: params ! object with TTM parameters
     real(8) G ! electron-phonon coupling [W/m^3 K]
     real(8) G0 ! electron-phonon coupling [W/m^3 K] at Tl = 300 K
-    real(8), parameter :: alpha = 0.55 ! parameters of lattice temperature dependence
+    real(8) f ! b-spline
+    ! real(8), parameter :: alpha = 0.55 ! parameters of lattice temperature dependence
     real(8), parameter :: Tl0 = 300  !
-    real(8), parameter :: a = 4.23d17, xc = 3943.2898, k = 4.696d-4  ! coefficients of sigmoidal fitting   
+    ! real(8), parameter :: a = 4.23d17, xc = 3943.2898, k = 4.696d-4  ! coefficients of sigmoidal fitting   
+    integer iflag
+    logical extrap
+    
     ! here we define function
-    ! fitted XTANT data for Ru. Or specify any shape of dependence
-    G0 = a / (1.0d0 + exp(-k*(Te - xc)))
-    !G = G0
-    G = G0 * (1.0d0 + alpha*(Tl/Tl0 - 1.0d0)) 
-    !
+    select case(params%g_flag)
+        case(0) ! constant value
+            G = params%G
+        case (1) ! G(Te). Use B-splines for interpolation/extrapolation over tabulated data
+            extrap = .true. 
+            call db1val(Te,0,params%g_spline%tx,params%g_spline%nx,params%g_spline%kx,params%g_spline%bcoef,f,iflag,params%g_spline%inbvx,extrap) 
+            G = f
+        case(2) ! G(Te, Ti). Use B-splines for interpolation/extrapolation over tabulated data
+            extrap = .true. 
+            call db1val(Te,0,params%g_spline%tx,params%g_spline%nx,params%g_spline%kx,params%g_spline%bcoef,f,iflag,params%g_spline%inbvx,extrap) 
+            G = f * (1.0d0 + params%g_alpha*(Tl/Tl0 - 1.0d0))
+        case default
+            G = params%G
+    end select   
     ! Petrov parametrization
     !G = (18 - 12.5*Te/(50.0d3 + Te))*1.0d17
     end function coupling    

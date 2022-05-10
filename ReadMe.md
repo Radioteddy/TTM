@@ -20,7 +20,7 @@ accounting transfer-matrix absorption profile
 
 
 ### TTM_parameters.txt
-    This file contains initial parameters of electron and lattice subsystems.
+    This file contains initial parameters of electron and lattice subsystems as well as parameters of simulation.
     Now is FOR ONE LAYER!
     See details in file
     
@@ -30,4 +30,4 @@ accounting transfer-matrix absorption profile
 
 ---
 
-### current version: 0.041
+### current version: 0.1.0

@@ -44,6 +44,7 @@ Module Solver
     !    end select
     delta = (laser%lambda * 1.d-9) / (4*g_pi*aimag(parameters%n)) + parameters%l_bal ! penetration depth
     space_source(:) = (1.0d0 - R) * exp(-parameters%X(:)/delta) / delta !(delta*(1 - exp(-parameters%dlayer/delta)))
+    !space_source(:) =exp(-parameters%X(:)/delta) / delta !(delta*(1 - exp(-parameters%dlayer/delta)))
     return
     end subroutine Beer_Lambert
     
@@ -397,7 +398,8 @@ Module Solver
         enddo Timeloop
         call CPU_TIME(t2)
         ttm_parameters%calctime = t2 - t1
-        
+        ! save absoprtion profile
+        call move_alloc(s_source, ttm_parameters%res_abs)
         ! deallocate all temporary arrays
         deallocate(Tel_temp)
         deallocate(Tel_corrector)
@@ -409,7 +411,6 @@ Module Solver
         deallocate(Clat_temp)
         deallocate(G_temp)
         if (allocated(temp_space)) deallocate(temp_space)
-        deallocate(s_source)
             
         return
     end subroutine time_evolution       

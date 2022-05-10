@@ -82,8 +82,8 @@ module Output
     type(TTM), intent(in) :: parameters     ! object with TTM parameters
     character(100), intent(in) :: opath     ! path for output data saving
     ! internal variables
-    integer i, j, k, FN, FNN, Nloops, dd, ddd, errnum
-    character(200) Filename, Filename2, Filename3, command, header
+    integer i, j, k, FN, FNN, FNNN, Nloops, dd, ddd, errnum
+    character(200) Filename, Filename2, Filename3, Filename4, command, header
     character(20) flu, tpu, lam, ind, th
     character(1) sep
     logical file_exist, file_opened, read_well    
@@ -104,7 +104,7 @@ module Output
     
         write(Filename,'(15a)') trim(adjustl(opath)), sep, 'TTM', sep, trim(adjustl(parameters%mat)), sep, trim(adjustl(th)), '_nm', sep, &
                                                 trim(adjustl(flu)), '_J_m2_', trim(adjustl(tpu)), '_fs_', trim(adjustl(lam)), '_nm'
-    inquire(DIRECTORY=trim(adjustl(Filename)),exist=file_exist)    ! check if input file excists
+    inquire(DIRECTORY=trim(adjustl(Filename)),exist=file_exist)    ! check if input folder excists
     if (.not. file_exist) then
         command='mkdir '//trim(adjustl(Filename)) ! to create a folder use this command
         i = system(trim(adjustl(command)))  ! create the folder
@@ -136,6 +136,16 @@ module Output
         write(Filename3,'(a,a,a,a,a)') trim(adjustl(Filename)), sep, 'conservation_', trim(adjustl(ind)), '.dat'
         inquire(FILE=trim(adjustl(Filename3)),exist=file_exist)    ! check if input file excists
     enddo
+    ! check if absorption.dat file exists
+    i = 0
+    Filename4 = trim(adjustl(Filename))//sep//'absorption.dat'
+    inquire(FILE=trim(adjustl(Filename4)),exist=file_exist)    ! check if input file excists
+    do while (file_exist)
+        i = i + 1
+        write(ind,'(i8)') i
+        write(Filename4,'(a,a,a,a,a)') trim(adjustl(Filename)), sep, 'absorption_', trim(adjustl(ind)), '.dat'
+        inquire(FILE=trim(adjustl(Filename4)),exist=file_exist)    ! check if input file excists
+    enddo
     
     FN = 300
     open(unit=FN, file=trim(adjustl(Filename2)))
@@ -147,6 +157,11 @@ module Output
     header = '# time (ps)       Fabs (J/m^2)       E_el (J/m^2)      E_lat (J/m^2)       Delta_E (%)'
     write(FNN, '(a)') trim(adjustl(header)) 
     
+    FNNN = 500
+    open(unit=FNNN, file=trim(adjustl(Filename4)))
+    header = '# depth (nm)       Abs (1/nm)'
+    write(FNNN, '(a)') trim(adjustl(header)) 
+    
     Nloops = size(parameters%res_Tel)
     ddd = int(Nloops/100.0d0)
     dd = ddd  
@@ -154,6 +169,9 @@ module Output
         write(FNN, '(4(f18.8,3x),f10.5)') parameters%res_time(i)*1.d12, parameters%res_Fabs(i), parameters%res_Eel(i), parameters%res_Elat(i), parameters%res_dE(i)
         do j = 1, size(parameters%res_Tel, 2)
             write(FN, '(4(e18.10,3x))') parameters%res_time(i)*1.d12, parameters%X(j)*1.d9, parameters%res_Tel(i,j), parameters%res_Tlat(i,j)
+            if (i .eq. 1) then
+                write(FNNN, '(2(f18.8,3x))') parameters%X(j)*1.d9, parameters%res_abs(j)*1.d-9
+            endif
             if (int(i*j) .EQ. dd) then
                 call progress('Save to output:   ', dd, Nloops)
                 dd = dd + ddd
@@ -168,6 +186,8 @@ module Output
     if (file_opened) close(FN)             ! and if it is, close it
     inquire(unit=FNN,opened=file_opened)    ! check if this file is opened
     if (file_opened) close(FNN)             ! and if it is, close it    
+    inquire(unit=FNNN,opened=file_opened)    ! check if this file is opened
+    if (file_opened) close(FNNN)             ! and if it is, close it    
     
     end subroutine Save_TTM
     
@@ -193,6 +213,7 @@ module Output
         if (allocated(parameters%Tel)) deallocate(parameters%Tel)
         if (allocated(parameters%Tlat)) deallocate(parameters%Tlat)
         if (allocated(parameters%res_time)) deallocate(parameters%res_time)
+        if (allocated(parameters%res_abs)) deallocate(parameters%res_abs)
         if (allocated(parameters%res_Tel)) deallocate(parameters%res_Tel)
         if (allocated(parameters%res_Tlat)) deallocate(parameters%res_Tlat)
         
